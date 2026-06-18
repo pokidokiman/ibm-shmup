@@ -140,18 +140,27 @@ function hit(){lives--;pl.inv=120;pl.pw=Math.max(1,pl.pw-1);parts.push(...mkPart
 // ─── DRAW ───
 function draw(){
   ctx.save();ctx.fillStyle='#020a02';ctx.fillRect(0,0,W,H);
-  // Draw boot text to canvas if visible
-  if(bootEl.textContent){
+  // Draw boot text — alleen tijdens boot
+  if(br&&bootEl.textContent){
     ctx.fillStyle='#33ff33';ctx.shadowBlur=6;ctx.shadowColor='#33ff33';ctx.font='14px "Courier New", monospace';
     bootEl.textContent.split('\n').forEach((l,i)=>ctx.fillText(l.replace('█','_'),20,30+i*22));
     ctx.shadowBlur=0
   }
-  // Draw title text to canvas if visible
+  // Draw title screen (SHMUP + IBM 5153 box + PRESS SPACE)
   if(showTitle){
-    ctx.fillStyle='#33ff33';ctx.shadowBlur=6;ctx.shadowColor='#33ff33';ctx.font='48px "Courier New", monospace';ctx.textAlign='center';
-    ctx.fillText('SHMUP',W/2,200);
-    ctx.font='18px "Courier New", monospace';ctx.fillText('IBM 5153',W/2,280);
-    ctx.font='22px "Courier New", monospace';ctx.fillText('□ INSERT COIN □',W/2,380);
+    ctx.fillStyle='#33ff33';ctx.shadowBlur=6;ctx.shadowColor='#33ff33';ctx.textAlign='center';
+    ctx.font='48px "Courier New", monospace';ctx.fillText('SHMUP',W/2,180);
+    ctx.shadowBlur=3;
+    // IBM 5153 box
+    ctx.font='18px "Courier New", monospace';ctx.strokeStyle='#33ff33';ctx.lineWidth=2;
+    ctx.strokeRect(W/2-90,210,180,40);ctx.fillText('IBM 5153',W/2,236);
+    ctx.shadowBlur=6;ctx.font='22px "Courier New", monospace';
+    // Knipperende PRESS SPACE
+    if(Math.floor(performance.now()/1000*2)%2===0)ctx.fillText('■ PRESS SPACE ■',W/2,350);
+    else ctx.fillText('  PRESS SPACE  ',W/2,350);
+    ctx.shadowBlur=0;ctx.font='14px "Courier New", monospace';ctx.fillStyle='rgba(0,255,0,0.4)';
+    ctx.fillText('ARROWS/ZQSD ─ MOVE  │  SPACE/Z ─ FIRE',W/2,420);
+    ctx.fillText('P ─ PAUSE',W/2,445);
     ctx.shadowBlur=0
   }
   if(gs==='playing'||gs==='paused'||gs==='gameover'){
@@ -223,7 +232,7 @@ document.addEventListener('keydown',e=>{
   else if(e.code==='KeyP'&&gs==='paused')gs='playing';
   if(e.code==='Space'||e.code==='Enter'){
     if(br){br=false;bd=true;showTitle=true;bootEl.style.display='none'}
-    else if(gs==='title'||gs==='gameover')start()
+    else if(showTitle||gs==='gameover')start()
   }
   if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault()
 });
