@@ -10,7 +10,7 @@ body{background:#010401;display:flex;justify-content:center;align-items:center;m
 
 #monitor{
   position:relative;
-  width:900px;height:675px;
+  width:1200px;height:900px;
   background:#050a05;
   border:22px solid #2a2a2a;
   border-radius:40px;
@@ -21,10 +21,10 @@ body{background:#010401;display:flex;justify-content:center;align-items:center;m
 #game-canvas{
   position:absolute;
   top:40px;left:50%;
-  width:820px;height:615px;
-  margin-left:-410px;
+  width:1100px;height:825px;
+  margin-left:-550px;
   display:block;
-  /* CRT barrel uit — gaf dubbel beeld/artifacts aan randen */
+  filter:url(#crt-barrel);
   border-radius:10px;
 }
 
@@ -67,9 +67,31 @@ body{background:#010401;display:flex;justify-content:center;align-items:center;m
   <div id="glass"></div>
 </div>
 
-<!-- SVG filter uit — CRT barrel verwijderd -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <defs>
+    <filter id="crt-barrel" filterUnits="objectBoundingBox" x="-15%" y="-15%" width="130%" height="130%">
+      <feImage id="sphereMap" result="map" href=""/>
+      <feDisplacementMap in="SourceGraphic" in2="map" scale="60" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </defs>
+</svg>
 
 <script>
+(function(){
+  const S=256,k=0.38;
+  const c=document.createElement('canvas');c.width=S;c.height=S;
+  const cx=c.getContext('2d'),id=cx.createImageData(S,S),d=id.data;
+  for(let y=0;y<S;y++)for(let x=0;x<S;x++){
+    const nx=(x/S)*2-1,ny=(y/S)*2-1,r2=nx*nx+ny*ny;
+    const i=(y*S+x)*4;
+    d[i  ]=Math.max(0,Math.min(255,Math.round((nx*k*r2+1)*127.5)));
+    d[i+1]=Math.max(0,Math.min(255,Math.round((ny*k*r2+1)*127.5)));
+    d[i+2]=128;d[i+3]=255;
+  }
+  cx.putImageData(id,0,0);
+  document.getElementById('sphereMap').setAttribute('href',c.toDataURL());
+})();
+
 const canvas=document.getElementById('game-canvas');
 const ctx=canvas.getContext('2d');
 const W=1024,H=768;
@@ -176,7 +198,7 @@ function up(){
   if(keys['ArrowRight']||keys['KeyD'])pl.x+=pl.speed;
   if(keys['ArrowUp']||keys['KeyW']||keys['KeyZ'])pl.y-=pl.speed;
   if(keys['ArrowDown']||keys['KeyS'])pl.y+=pl.speed;
-  pl.x=Math.max(20,Math.min(W-20,pl.x));pl.y=Math.max(20,Math.min(H-20,pl.y));
+  pl.x=Math.max(120,Math.min(W-120,pl.x));pl.y=Math.max(20,Math.min(H-20,pl.y));
   if(pl.ft>0)pl.ft--;
   if((keys['Space']||keys['KeyZ'])&&pl.ft<=0){
     if(pl.pw>=1)buls.push(mkBul(pl.x,pl.y-12));
@@ -218,7 +240,7 @@ function up(){
       for(let i=0;i<count;i++){
         const et=eTypes[Math.max(0,ti-1+Math.floor(Math.random()*2))];
         const pat=patterns[i%patterns.length];
-        const x=80+Math.random()*(W-160);
+        const x=120+Math.random()*(W-240);
         const y=-40-i*50;
         enems.push(mkEn(x,y,et,pat));
       }
@@ -362,9 +384,9 @@ function noGlow(){ctx.shadowBlur=0}
 
 // ─── SCROLLING BACKGROUND ───
 const stars=[];
-for(let i=0;i<80;i++)stars.push({x:Math.random()*W,y:Math.random()*H,s:0.5+Math.random()*2.5,v:0.3+Math.random()*1.2,c:Math.random()>0.7?'#66ff66':'#33ff33'});
+for(let i=0;i<80;i++)stars.push({x:120+Math.random()*(W-240),y:Math.random()*H,s:0.5+Math.random()*2.5,v:0.3+Math.random()*1.2,c:Math.random()>0.7?'#66ff66':'#33ff33'});
 const cityLights=[];
-for(let i=0;i<50;i++)cityLights.push({x:Math.random()*W,w:8+Math.random()*35,h:20+Math.random()*80,b:Math.random()>0.3});
+for(let i=0;i<50;i++)cityLights.push({x:120+Math.random()*(W-240),w:8+Math.random()*35,h:20+Math.random()*80,b:Math.random()>0.3});
 let scrollY=0;
 
 function drawBackground(){
@@ -375,7 +397,7 @@ function drawBackground(){
   // Stars — meerdere lagen voor diepte
   for(const s of stars){
     s.y+=s.v;
-    if(s.y>H){s.y=-5;s.x=Math.random()*W;s.v=0.5+Math.random()*2}
+    if(s.y>H){s.y=-5;s.x=120+Math.random()*(W-240);s.v=0.5+Math.random()*2}
     ctx.globalAlpha=0.2+Math.sin(s.y*0.015+frame*0.03)*0.15;
     ctx.fillStyle=s.c;
     ctx.fillRect(s.x,s.y,s.s*1.5,s.s*1.5);
@@ -504,12 +526,12 @@ function render(){
 
     ctx.font=`14px ${MONO}`;ctx.fillStyle=FG;glow(FG,5);
     ctx.textAlign='left';ctx.textBaseline='top';
-    ctx.fillText('SCORE '+String(score).padStart(5,'0'),10,8);
-    ctx.fillText('HI '+String(hs).padStart(5,'0'),W-180,8);
+    ctx.fillText('SCORE '+String(score).padStart(5,'0'),120,8);
+    ctx.fillText('HI '+String(hs).padStart(5,'0'),W-120,8);
     ctx.textAlign='left';ctx.textBaseline='bottom';
     let ls='';for(let i=0;i<lives;i++)ls+='▲ ';
-    ctx.fillText(ls,10,H-8);
-    ctx.textAlign='right';ctx.fillText('PWR:'+pl.pw,W-10,H-8);
+    ctx.fillText(ls,120,H-8);
+    ctx.textAlign='right';ctx.fillText('PWR:'+pl.pw,W-120,H-8);
     ctx.textAlign='center';ctx.fillStyle='rgba(51,255,51,0.4)';
     ctx.fillText('WAVE '+wave,W/2,H-8);
     if(cc>1){ctx.fillStyle='#ffdd00';ctx.font=`18px ${MONO}`;glow('#ff0',10);ctx.textBaseline='top';ctx.fillText('×'+cc,W/2,32)}
