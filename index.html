@@ -154,11 +154,11 @@ const bL=[
   {t:'Memory Test:     ',d:80,mem:true},{t:'',d:150},{t:'  IBM SHMUP v1.0 detected',d:400},{t:'',d:100},
   {t:'  2 Floppy drive(s) detected',d:300},{t:'',d:150},{t:'  Starting MS-DOS...',d:600},{t:'',d:200},
 ];
-let bootLines=[],showTitle=false,bootRunning=true,bootDone=false,gameOverShow=false,goTime=0;
+let bootLines=[],showTitle=false,bootRunning=true,bootDone=false,gameOverShow=false,goTime=0,cancelled=false;
 
 function boot(){
   bootRunning=true;bootDone=false;showTitle=false;gameOverShow=false;
-  let li=0,ci=0,mem=0,bt=[],cancelled=false;
+  let li=0,ci=0,mem=0,bt=[];
   function n(){
     if(cancelled)return;
     if(li>=bL.length){
@@ -223,7 +223,7 @@ function up(){
   // Spawn enemies
   if(spawnTimer>0)spawnTimer--;
   
-  if(wt<=0&&!boss&&enems.length===0&&spawnTimer<=0){
+  if(wt<=0&&!boss&&spawnTimer<=0&&(enems.length===0||wt<=-300)){
     wave++;
     waveType=(wave%5===0)?4:wave%4;
     const isBossWave=wave%5===0;
@@ -252,11 +252,11 @@ function up(){
   // ─── ENEMY BEHAVIOR ───
   for(const e of enems){
     e.ti++;
-    if(e.pat==='sin'){e.x=e.ox+Math.sin(e.ti*0.04)*150;e.y+=e.sp*0.5}
-    else if(e.pat==='zig'){e.x+=Math.sin(e.ti*0.1)*3;e.y+=e.sp*0.4}
-    else if(e.pat==='duik'){if(e.ti<60){e.y+=e.sp*0.3;e.x+=Math.sin(e.ti*0.05)*2}else{e.y+=e.sp*1.2}}
-    else if(e.pat==='snell'){e.y+=e.sp*0.8}
-    else{e.y+=e.sp*0.4}
+    if(e.pat==='sin'){e.x=e.ox+Math.sin(e.ti*0.04)*150;e.y+=e.sp}
+    else if(e.pat==='zig'){e.x+=Math.sin(e.ti*0.1)*3;e.y+=e.sp*1.2}
+    else if(e.pat==='duik'){if(e.ti<60){e.y+=e.sp*0.8;e.x+=Math.sin(e.ti*0.05)*2}else{e.y+=e.sp*2.5}}
+    else if(e.pat==='snell'){e.y+=e.sp*1.8}
+    else{e.y+=e.sp}
     
     e.st--;if(e.st<=0&&e.y>20&&e.y<H*0.5){ebuls.push(mkBul(e.x,e.y+10,true,1.5+Math.random()));e.st=Math.max(60,e.sr-wave*3)}
     if(e.y>H+30||e.x<-50||e.x>W+50)e.act=false
@@ -308,7 +308,7 @@ function up(){
   for(const p of parts){p.x+=p.vx;p.y+=p.vy;p.l--}
   parts=parts.filter(p=>p.l>0);enems=enems.filter(e=>e.act)
 }
-function hit(){lives--;pl.inv=120;pl.pw=Math.max(1,pl.pw-1);parts.push(...mkParts(pl.x,pl.y,'#f00',20));triggerRasterTear();sfxGameOver();if(lives<=0){gs='gameover';if(score>hs){hs=score;localStorage.setItem('hs',hs)}gameOverShow=true;goTime=performance.now()}}
+function hit(){lives--;pl.inv=120;pl.pw=Math.max(1,pl.pw-1);parts.push(...mkParts(pl.x,pl.y,'#f00',20));triggerRasterTear();if(lives<=0){gs='gameover';sfxGameOver();if(score>hs){hs=score;localStorage.setItem('hs',hs)}gameOverShow=true;goTime=performance.now()}}
 
 // ─── FLOPPY DRIVE SEEK SOUND ───
 function sfxFloppySeek(){
