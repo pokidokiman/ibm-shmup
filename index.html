@@ -15,7 +15,10 @@ body{background:#010401;display:flex;justify-content:center;align-items:center;m
   background:#050a05;
   border:22px solid #2a2a2a;
   border-radius:40px;
-  box-shadow:0 30px 60px rgba(0,0,0,0.8), inset 0 0 100px rgba(0,0,0,0.6);
+  box-shadow:
+    0 30px 60px rgba(0,0,0,0.8),
+    inset 0 0 100px rgba(0,0,0,0.6),
+    inset 0 0 30px rgba(0,20,0,0.4);
   overflow:hidden;
 }
 
@@ -26,6 +29,8 @@ body{background:#010401;display:flex;justify-content:center;align-items:center;m
   color:#33ff33;font-size:20px;line-height:1.4;
   text-shadow:0 0 1px rgba(51,255,51,0.9), 0 0 7px rgba(51,255,51,0.6), 0 0 15px rgba(51,255,51,0.3);
   filter:url(#crt-barrel);
+  border-radius:10px;
+  overflow:hidden;
 }
 
 /* SCANLINES */
@@ -34,6 +39,33 @@ body{background:#010401;display:flex;justify-content:center;align-items:center;m
   background:linear-gradient(to bottom,rgba(0,0,0,0) 50%,rgba(0,0,0,0.18) 50%);
   background-size:100% 3px;
   pointer-events:none;z-index:10;
+}
+
+/* VIGNETTE — phosphor edge darkening */
+#vignette{
+  position:absolute;top:40px;left:40px;right:40px;bottom:40px;
+  background:radial-gradient(ellipse at 50% 50%,
+    transparent 45%,
+    rgba(0,0,0,0.30) 68%,
+    rgba(0,0,0,0.72) 88%,
+    rgba(0,0,0,0.90) 100%
+  );
+  pointer-events:none;z-index:11;
+  border-radius:10px;
+}
+
+/* SCREEN GLASS REFLECTION */
+#glass{
+  position:absolute;top:40px;left:40px;right:40px;bottom:40px;
+  background:linear-gradient(
+    145deg,
+    rgba(255,255,255,0.035) 0%,
+    transparent 45%,
+    transparent 55%,
+    rgba(255,255,255,0.012) 100%
+  );
+  pointer-events:none;z-index:12;
+  border-radius:10px;
 }
 
 /* FOSFOR DECAY */
@@ -52,20 +84,49 @@ body{background:#010401;display:flex;justify-content:center;align-items:center;m
 <div id="monitor">
   <div id="scanlines"></div>
   <div id="screen"></div>
+  <div id="vignette"></div>
+  <div id="glass"></div>
 </div>
 
 <canvas id="game-canvas" width="1024" height="768"></canvas>
 
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
   <defs>
-    <filter id="crt-barrel" filterUnits="objectBoundingBox" x="-50%" y="-50%" width="200%" height="200%">
-      <feImage id="sphereMap" result="map" href="data:image/png;base64,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"/>
-      <feDisplacementMap in="SourceGraphic" in2="map" scale="100" xChannelSelector="R" yChannelSelector="G"/>
+    <filter id="crt-barrel" filterUnits="objectBoundingBox" x="-10%" y="-10%" width="120%" height="120%">
+      <feImage id="sphereMap" result="map" href=""/>
+      <feDisplacementMap in="SourceGraphic" in2="map" scale="80" xChannelSelector="R" yChannelSelector="G"/>
     </filter>
   </defs>
 </svg>
 
 <script>
+// ─── GENERATE BARREL DISTORTION MAP ───
+// Produces a mathematically correct barrel-warp displacement map at runtime.
+// Red channel = horizontal displacement, Green = vertical (128 = neutral).
+(function(){
+  const MW=256,MH=256,k=0.38;
+  const c=document.createElement('canvas');
+  c.width=MW;c.height=MH;
+  const cx=c.getContext('2d');
+  const id=cx.createImageData(MW,MH);
+  const d=id.data;
+  for(let y=0;y<MH;y++){
+    for(let x=0;x<MW;x++){
+      const nx=(x/MW)*2-1, ny=(y/MH)*2-1;
+      const r2=nx*nx+ny*ny;
+      // Barrel: source pixels radially displaced outward from center
+      const dx=nx*k*r2, dy=ny*k*r2;
+      const i=(y*MW+x)*4;
+      d[i  ]=Math.max(0,Math.min(255,Math.round((dx+1)*127.5)));
+      d[i+1]=Math.max(0,Math.min(255,Math.round((dy+1)*127.5)));
+      d[i+2]=128;
+      d[i+3]=255;
+    }
+  }
+  cx.putImageData(id,0,0);
+  document.getElementById('sphereMap').setAttribute('href',c.toDataURL());
+})();
+
 // ─── CANVAS SETUP ───
 const canvas=document.getElementById('game-canvas');
 const ctx=canvas.getContext('2d');
@@ -134,7 +195,6 @@ function boot(){
 
 function startGame(){
   if(bootRunning)return;
-  if(!bootDone){boot();bootDone=true;return}
   showTitle=false;gameOverShow=false;
   reset();gs='playing';renderScreen()
 }
@@ -144,14 +204,16 @@ function up(){
   if(gs!=='playing')return;frame++;
   if(keys['ArrowLeft']||keys['KeyA']||keys['KeyQ'])pl.x-=pl.speed;
   if(keys['ArrowRight']||keys['KeyD'])pl.x+=pl.speed;
-  if(keys['ArrowUp']||keys['KeyZ']||keys['KeyW'])pl.y-=pl.speed;
+  if(keys['ArrowUp']||keys['KeyW'])pl.y-=pl.speed;
   if(keys['ArrowDown']||keys['KeyS'])pl.y+=pl.speed;
   pl.x=Math.max(20,Math.min(W-20,pl.x));pl.y=Math.max(20,Math.min(H-20,pl.y));
   if(pl.ft>0)pl.ft--;
+  // Space fires; Z on AZERTY moves up AND fires (intentional AZERTY dual-role)
   if((keys['Space']||keys['KeyZ'])&&pl.ft<=0){
     if(pl.pw>=1)buls.push(mkBul(pl.x,pl.y-12));
     if(pl.pw>=2){buls.push(mkBul(pl.x-8,pl.y-6));buls.push(mkBul(pl.x+8,pl.y-6))}
-    if(pl.pw>=3){buls[buls.length-3].vx=-0.5;buls[buls.length-2].vx=0.5}
+    // Fix: apply outward spread to the two side bullets (indices -2 and -1)
+    if(pl.pw>=3){buls[buls.length-2].vx=-0.5;buls[buls.length-1].vx=0.5}
     pl.ft=pl.fire-pl.pw
   }
   if(pl.inv>0)pl.inv--;
@@ -190,11 +252,6 @@ function hit(){lives--;pl.inv=120;pl.pw=Math.max(1,pl.pw-1);parts.push(...mkPart
 function renderScreen(){
   let html='';
 
-  // Boot text
-  if(bootRunning||bootDone&&!showTitle&&gs==='title'){
-    // Als boot bezig is of klaar maar title nog niet getoond, laat boot tekst zien
-  }
-
   if(bootRunning&&bootLines.length>0){
     html+='<p class="d">'+bootLines.join('<br>')+'<span class="c"></span></p>'
   }
@@ -206,14 +263,12 @@ function renderScreen(){
     if(Math.floor(performance.now()/500)%2===0)html+='■ PRESS SPACE ■';
     else html+='  PRESS SPACE  ';
     html+='</p>';
-    html+='<p style="font-size:14px;text-align:center;margin-top:50px;opacity:0.5">ARROWS/ZQSD ─ MOVE &nbsp;│&nbsp; SPACE/Z ─ FIRE<br>P ─ PAUSE</p>'
+    html+='<p style="font-size:14px;text-align:center;margin-top:50px;opacity:0.5">ARROWS/WASD/ZQSD ─ MOVE &nbsp;│&nbsp; SPACE ─ FIRE<br>Z ─ MOVE UP (AZERTY) &nbsp;│&nbsp; P ─ PAUSE</p>'
   }
 
   if(gs==='playing'||gs==='paused'){
-    // Score
     html+='<p style="font-size:14px;position:absolute;top:5px;left:10px">SCORE '+String(score).padStart(5,'0')+'</p>';
     html+='<p style="font-size:14px;position:absolute;top:5px;right:10px">HI '+String(hs).padStart(5,'0')+'</p>';
-    // Lives
     let ls='';for(let i=0;i<lives;i++)ls+='▲ ';
     html+='<p style="font-size:16px;position:absolute;bottom:5px;left:10px">'+ls+'</p>';
     html+='<p style="font-size:14px;position:absolute;bottom:5px;right:10px">PWR:'+pl.pw+'</p>';
