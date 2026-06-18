@@ -88,7 +88,6 @@ canvas {
   image-rendering: pixelated;
   image-rendering: crisp-edges;
 }
-
 /* CRT mask over het canvas — retromator style */
 #crt-frame {
   position: absolute;
@@ -195,51 +194,7 @@ body::after {
 </head>
 <body class="crt">
 
-<!-- CRT barrel distortion — pas filter toe op canvas element -->
-<svg style="position:absolute;width:0;height:0;overflow:hidden;">
-  <defs>
-    <filter id="barrel-distort" filterUnits="objectBoundingBox" x="-50%" y="-50%" width="200%" height="200%">
-      <feImage id="barrelMap" result="barrelMap" href="" />
-      <feDisplacementMap in="SourceGraphic" in2="barrelMap" scale="100" xChannelSelector="R" yChannelSelector="G" />
-    </filter>
-  </defs>
-</svg>
-<script>
-// Generate barrel distortion displacement map (retromator style)
-(function() {
-  const W = 640, H = 480;
-  const cw = W/2, ch = H/2;
-  const R = Math.min(cw, ch);
-  const strength = 0.18;
-  const canvas = document.createElement('canvas');
-  canvas.width = W; canvas.height = H;
-  const ctx = canvas.getContext('2d');
-  const imgData = ctx.createImageData(W, H);
-  const data = imgData.data;
-
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      const nx = (x - cw) / R;
-      const ny = (y - ch) / R;
-      const dist = Math.sqrt(nx*nx + ny*ny);
-      let scale = 1;
-      if (dist > 0.001) scale = 1 + strength * dist * dist;
-      const idx = (y * W + x) * 4;
-      data[idx]   = Math.round(Math.max(0, Math.min(255, 128 + nx * (1 - 1/scale) * 128)));
-      data[idx+1] = Math.round(Math.max(0, Math.min(255, 128 + ny * (1 - 1/scale) * 128)));
-      data[idx+2] = 0;
-      data[idx+3] = 255;
-    }
-  }
-  ctx.putImageData(imgData, 0, 0);
-  const dataUrl = canvas.toDataURL('image/png');
-
-  // Inject into SVG filter
-  const svg = document.querySelector('svg');
-  const feImg = svg.querySelector('#barrelMap');
-  if (feImg) feImg.setAttribute('href', dataUrl);
-})();
-</script>
+<!-- CRT barrel distortion — WebGL via CRTFilter.js -->
 
 <!-- CRT bezel + curvature -->
 <div id="crt-bezel">
@@ -1170,6 +1125,110 @@ hiScoreSpan.textContent = String(hiScore).padStart(5, '0');
 titleScreen.style.display = 'none';
 bootScreen.style.display = 'flex';
 runBootSequence();
+
+// ─── WEBGL CRT SHADER — barrel distortion + scanlines ───
+(function() {
+  try {
+    const w = 640, h = 480;
+    // Game drawt naar ctx. We lezen ctx pixels en sturen naar WebGL
+    // Maak een WebGL canvas dat over het game-canvas heen komt
+    const glCanvas = document.createElement('canvas');
+    glCanvas.width = w;
+    glCanvas.height = h;
+    glCanvas.style.cssText = 'position:absolute;top:0;left:0;width:800px;height:600px;z-index:2;pointer-events:none;';
+
+    const gl = glCanvas.getContext('webgl') || glCanvas.getContext('experimental-webgl');
+    if (!gl) { console.warn('WebGL not available'); return; }
+
+    // Vertex shader
+    const vs = gl.createShader(gl.VERTEX_SHADER);
+    gl.shaderSource(vs, 'attribute vec2 p;varying vec2 t;void main(){t=vec2(p.x,1.0-p.y);gl_Position=vec4(p*2.0-1.0,0,1);}');
+    gl.compileShader(vs);
+
+    // Fragment shader — barrel distortion + scanlines
+    const fsSrc = `
+      precision mediump float;
+      varying vec2 t;
+      uniform sampler2D u;
+      uniform float u_time;
+      void main() {
+        vec2 uv = t;
+        // Barrel distortion: uv + centered * dist^2 * amount
+        vec2 c = uv - 0.5;
+        float d = dot(c, c);
+        uv = uv + c * d * 0.003;
+
+        vec3 col;
+        col.r = texture2D(u, uv + vec2(0.0005, 0.0)).r;
+        col.g = texture2D(u, uv).g;
+        col.b = texture2D(u, uv - vec2(0.0005, 0.0)).b;
+
+        // Scanlines
+        col *= 1.0 - 0.25 * sin(uv.y * 800.0);
+
+        // Vignette
+        float v = 1.0 - 0.3 * length(uv - 0.5);
+        col *= v;
+
+        gl_FragColor = vec4(col, 1.0);
+      }
+    `;
+    const fs = gl.createShader(gl.FRAGMENT_SHADER);
+    gl.shaderSource(fs, fsSrc);
+    gl.compileShader(fs);
+    if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) {
+      console.error('FS compile error:', gl.getShaderInfoLog(fs));
+      return;
+    }
+
+    const prog = gl.createProgram();
+    gl.attachShader(prog, vs);
+    gl.attachShader(prog, fs);
+    gl.linkProgram(prog);
+    gl.useProgram(prog);
+
+    // Vertices
+    const vb = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vb);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
+    const ploc = gl.getAttribLocation(prog, 'p');
+    gl.enableVertexAttribArray(ploc);
+    gl.vertexAttribPointer(ploc, 2, gl.FLOAT, false, 0, 0);
+
+    // Texture
+    const tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+    const uloc = gl.getUniformLocation(prog, 'u');
+    const timeLoc = gl.getUniformLocation(prog, 'u_time');
+
+    // Insert WebGL canvas over game canvas
+    document.getElementById('game-container').appendChild(glCanvas);
+
+    // Override gameLoop to render through WebGL
+    gameLoop = function() {
+      update();
+      draw();
+
+      // Copy game canvas pixels to WebGL texture
+      const imgData = ctx.getImageData(0, 0, w, h);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, imgData.data);
+
+      gl.uniform1f(timeLoc, performance.now() / 1000.0);
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+      requestAnimationFrame(gameLoop);
+    };
+
+  } catch(e) {
+    console.warn('WebGL CRT effect failed:', e);
+  }
+})();
+
 gameLoop();
 </script>
 </div>
