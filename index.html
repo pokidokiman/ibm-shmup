@@ -384,9 +384,9 @@ function noGlow(){ctx.shadowBlur=0}
 
 // ─── SCROLLING BACKGROUND ───
 const stars=[];
-for(let i=0;i<80;i++)stars.push({x:80+Math.random()*(W-160),y:Math.random()*H,s:0.5+Math.random()*2.5,v:0.3+Math.random()*1.2,c:Math.random()>0.7?'#66ff66':'#33ff33'});
+for(let i=0;i<80;i++)stars.push({x:Math.random()*W,y:Math.random()*H,s:0.5+Math.random()*2.5,v:0.3+Math.random()*1.2,c:Math.random()>0.7?'#66ff66':'#33ff33'});
 const cityLights=[];
-for(let i=0;i<50;i++)cityLights.push({x:80+Math.random()*(W-160),w:8+Math.random()*35,h:20+Math.random()*80,b:Math.random()>0.3});
+for(let i=0;i<50;i++)cityLights.push({x:Math.random()*W,w:8+Math.random()*35,h:20+Math.random()*80,b:Math.random()>0.3});
 let scrollY=0;
 
 function drawBackground(){
@@ -397,7 +397,7 @@ function drawBackground(){
   // Stars — meerdere lagen voor diepte
   for(const s of stars){
     s.y+=s.v;
-    if(s.y>H){s.y=-5;s.x=80+Math.random()*(W-160);s.v=0.5+Math.random()*2}
+    if(s.y>H){s.y=-5;s.x=Math.random()*W;s.v=0.5+Math.random()*2}
     ctx.globalAlpha=0.2+Math.sin(s.y*0.015+frame*0.03)*0.15;
     ctx.fillStyle=s.c;
     ctx.fillRect(s.x,s.y,s.s*1.5,s.s*1.5);
@@ -446,9 +446,6 @@ function render(){
 
   ctx.clearRect(0,0,W,H);
   ctx.fillStyle=BG;ctx.fillRect(0,0,W,H);
-  
-  // CRT safe zone: barrel distortion trekt randen naar binnen, clip alles buiten 80px marge
-  ctx.beginPath();ctx.rect(80,0,W-160,H);ctx.clip();
 
   const blink=Math.floor(performance.now()/500)%2===0;
   const LH=22;
