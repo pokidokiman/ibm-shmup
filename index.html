@@ -36,7 +36,7 @@ body {
 }
 
 #crt-bezel #game-container {
-  /* Beeld blijft vlak, curvature gebeurt via crt-overlay canvas */
+  /* Barrel distortion via SVG filter (feDisplacementMap) */
 }
 
 /* CRT vignette — donkere hoeken, glow in centrum */
@@ -62,7 +62,7 @@ body {
 #crt-bezel {
   position: relative;
   perspective: 800px;
-  width: 824px; height: 624px; /* 800+24 padding for outline */
+  width: 824px; height: 624px;
   background: #000;
   outline: 4px solid #0a0;
   outline-offset: 2px;
@@ -74,7 +74,7 @@ body {
   align-items: center;
 }
 
-#game-container {
+#crt-bezel #game-container {
   position: relative;
   width: 800px; height: 600px;
 }
@@ -83,6 +83,8 @@ canvas {
   display: block;
   width: 800px; height: 600px;
   background: #000;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 
 #ui-overlay {
@@ -181,10 +183,56 @@ body::after {
 </head>
 <body class="crt">
 
+<!-- CRT barrel distortion — pas filter toe op canvas element -->
+<svg style="position:absolute;width:0;height:0;overflow:hidden;">
+  <defs>
+    <filter id="barrel-distort" filterUnits="objectBoundingBox" x="-50%" y="-50%" width="200%" height="200%">
+      <feImage id="barrelMap" result="barrelMap" href="" />
+      <feDisplacementMap in="SourceGraphic" in2="barrelMap" scale="100" xChannelSelector="R" yChannelSelector="G" />
+    </filter>
+  </defs>
+</svg>
+<script>
+// Generate barrel distortion displacement map (retromator style)
+(function() {
+  const W = 640, H = 480;
+  const cw = W/2, ch = H/2;
+  const R = Math.min(cw, ch);
+  const strength = 0.18;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  const imgData = ctx.createImageData(W, H);
+  const data = imgData.data;
+
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const nx = (x - cw) / R;
+      const ny = (y - ch) / R;
+      const dist = Math.sqrt(nx*nx + ny*ny);
+      let scale = 1;
+      if (dist > 0.001) scale = 1 + strength * dist * dist;
+      const idx = (y * W + x) * 4;
+      data[idx]   = Math.round(Math.max(0, Math.min(255, 128 + nx * (1 - 1/scale) * 128)));
+      data[idx+1] = Math.round(Math.max(0, Math.min(255, 128 + ny * (1 - 1/scale) * 128)));
+      data[idx+2] = 0;
+      data[idx+3] = 255;
+    }
+  }
+  ctx.putImageData(imgData, 0, 0);
+  const dataUrl = canvas.toDataURL('image/png');
+
+  // Inject into SVG filter
+  const svg = document.querySelector('svg');
+  const feImg = svg.querySelector('#barrelMap');
+  if (feImg) feImg.setAttribute('href', dataUrl);
+})();
+</script>
+
 <!-- CRT bezel + curvature -->
 <div id="crt-bezel">
 <div id="game-container">
-  <canvas id="game" width="800" height="600"></canvas>
+  <canvas id="game" width="800" height="600" style="filter:url(#barrel-distort);"></canvas>
   <div id="ui-overlay">
     <div class="left">
       SCORE<br><span id="scoreDisplay">00000</span>
@@ -305,7 +353,9 @@ function sfxFloppySeek() {
 // ─── CANVAS ───
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
-const W = 800, H = 600;
+const W = 640, H = 480;
+canvas.width = W;
+canvas.height = H;
 
 // UI elements
 const scoreSpan = document.getElementById('scoreDisplay');
@@ -1058,48 +1108,107 @@ function draw() {
   ctx.fillStyle = 'rgba(0,255,0,0.015)';
   ctx.fillRect(0, 0, W, H);
 
-  // ─── CRT VIGNETTE + BEZEL ───
-  // Vignette: donkere hoeken
-  const vGrad = ctx.createRadialGradient(W/2, H/2, H*0.25, W/2, H/2, H*0.7);
-  vGrad.addColorStop(0, 'rgba(0,0,0,0)');
-  vGrad.addColorStop(0.55, 'rgba(0,0,0,0)');
-  vGrad.addColorStop(0.8, 'rgba(0,0,0,0.08)');
-  vGrad.addColorStop(0.95, 'rgba(0,0,0,0.18)');
-  vGrad.addColorStop(1, 'rgba(0,0,0,0.40)');
-  ctx.fillStyle = vGrad;
-  ctx.fillRect(0, 0, W, H);
+  // ─── CRT BEZEL — zichtbare curved hoeken ───
+  // Simpele aanpak: teken zwarte bogen in alle 4 hoeken
+  const bw = 28; // bezel dikte
+  const br = 50; // curve radius
 
-  // CRT bezel — zwarte rand met gebogen hoeken (barrel distortion simulatie)
-  const bCurve = 40;
+  ctx.fillStyle = '#000';
+
+  // Bovenbalk
+  ctx.fillRect(0, 0, W, br);
+  // Onderbalk
+  ctx.fillRect(0, H - br, W, br);
+  // Linkerbalk
+  ctx.fillRect(0, 0, br, H);
+  // Rechterbalk
+  ctx.fillRect(W - br, 0, br, H);
+
+  // Hoekuitsparingen — cirkels in de hoeken die het zwart "wegsnijden"
+  // Boven-links: witte cirkel in de hoek
+  ctx.fillStyle = '#000'; // zwart
+  // Boven-links curve — teken een cirkel buiten het canvas zodat de hoek rond wordt
   ctx.beginPath();
-  ctx.moveTo(W, 0);
-  ctx.lineTo(W, H);
-  ctx.lineTo(0, H);
+  ctx.arc(br, br, br, Math.PI, 1.5 * Math.PI, false);
+  ctx.lineTo(br, 0);
   ctx.lineTo(0, 0);
-  ctx.closePath();
+  ctx.lineTo(0, br);
+  ctx.fill();
 
-  // Bezel uitsparing met curves (bolle CRT look)
-  ctx.moveTo(bCurve, 0);
-  ctx.quadraticCurveTo(150, -10, W/2, -8);        // Boven
-  ctx.quadraticCurveTo(W-150, -10, W-bCurve, 0);
-  ctx.quadraticCurveTo(W+4, 150, W+2, H/2);        // Rechts
-  ctx.quadraticCurveTo(W+4, H-150, W-bCurve, H);
-  ctx.quadraticCurveTo(W-150, H+10, W/2, H+8);     // Onder
-  ctx.quadraticCurveTo(150, H+10, bCurve, H);
-  ctx.quadraticCurveTo(-4, H-150, -2, H/2);         // Links
-  ctx.quadraticCurveTo(-4, 150, bCurve, 0);
-
-  ctx.fillStyle = 'rgba(0,0,0,0.35)';
-  ctx.fill('evenodd');
-
-  // Extra: glow strook langs de randen voor CRT depth
-  ctx.strokeStyle = 'rgba(0,255,0,0.04)';
-  ctx.lineWidth = 2;
+  // Boven-rechts
   ctx.beginPath();
-  ctx.moveTo(bCurve+2, 2);
-  ctx.quadraticCurveTo(150, -6, W/2, -4);
-  ctx.quadraticCurveTo(W-150, -6, W-bCurve-2, 2);
-  ctx.stroke();
+  ctx.arc(W - br, br, br, 1.5 * Math.PI, 2 * Math.PI, false);
+  ctx.lineTo(W, 0);
+  ctx.lineTo(W, br);
+  ctx.lineTo(W - br, br);
+  ctx.fill();
+
+  // Beneden-links
+  ctx.beginPath();
+  ctx.arc(br, H - br, br, 0.5 * Math.PI, Math.PI, false);
+  ctx.lineTo(0, H);
+  ctx.lineTo(0, H - br);
+  ctx.lineTo(br, H - br);
+  ctx.fill();
+
+  // Beneden-rechts
+  ctx.beginPath();
+  ctx.arc(W - br, H - br, br, 0, 0.5 * Math.PI, false);
+  ctx.lineTo(W - br, H);
+  ctx.lineTo(W, H);
+  ctx.lineTo(W, H - br);
+  ctx.fill();
+
+  // Nu de bezel balken INWENDIG (dunnere rand die over het beeld valt)
+  // Deze geven de illusie van diepte
+  ctx.fillStyle = '#000';
+  // Binnenrand boven
+  ctx.fillRect(br, 0, W - 2*br, bw);
+  // Binnenrand onder
+  ctx.fillRect(br, H - bw, W - 2*br, bw);
+  // Binnenrand links
+  ctx.fillRect(0, br, bw, H - 2*br);
+  // Binnenrand rechts
+  ctx.fillRect(W - bw, br, bw, H - 2*br);
+
+  // Cuve de hoeken van de binnenrand af
+  ctx.fillStyle = '#000';
+  // Boven-links binnen
+  ctx.beginPath();
+  ctx.arc(br + bw, br + bw, bw, Math.PI, 1.5 * Math.PI, false);
+  ctx.lineTo(br + bw, br);
+  ctx.lineTo(br, br);
+  ctx.lineTo(br, br + bw);
+  ctx.fill();
+
+  // Boven-rechts binnen
+  ctx.beginPath();
+  ctx.arc(W - br - bw, br + bw, bw, 1.5 * Math.PI, 2 * Math.PI, false);
+  ctx.lineTo(W - br, br);
+  ctx.lineTo(W - br, br + bw);
+  ctx.lineTo(W - br - bw, br + bw);
+  ctx.fill();
+
+  // Beneden-links binnen
+  ctx.beginPath();
+  ctx.arc(br + bw, H - br - bw, bw, 0.5 * Math.PI, Math.PI, false);
+  ctx.lineTo(br, H - br);
+  ctx.lineTo(br + bw, H - br);
+  ctx.lineTo(br + bw, H - br - bw);
+  ctx.fill();
+
+  // Beneden-rechts binnen
+  ctx.beginPath();
+  ctx.arc(W - br - bw, H - br - bw, bw, 0, 0.5 * Math.PI, false);
+  ctx.lineTo(W - br - bw, H - br);
+  ctx.lineTo(W - br, H - br);
+  ctx.lineTo(W - br, H - br - bw);
+  ctx.fill();
+
+  // CRT diepte glow — subtiele groene rand langs de binnenkant van de bezel
+  ctx.strokeStyle = 'rgba(0,180,0,0.08)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(br + bw - 1, br + bw - 1, W - 2*(br + bw) + 2, H - 2*(br + bw) + 2);
 
   ctx.restore();
 }
