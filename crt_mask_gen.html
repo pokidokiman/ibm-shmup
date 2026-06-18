@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html><body>
+<canvas id="crt-mask-canvas" width="800" height="600"></canvas>
+<script>
+const c = document.getElementById('crt-mask-canvas');
+const ctx = c.getContext('2d');
+const W=800, H=600;
+
+// Clear
+ctx.clearRect(0,0,W,H);
+
+// 1. CRT curved bezel — zwarte rand met afgeronde hoeken, binnenkant doorzichtig
+const bezelW = 20;
+const cornerR = 40;
+
+// Teken de bezel: vierkant met afgeronde uitsparing
+ctx.beginPath();
+// buitenomtrek (full canvas)
+ctx.rect(0, 0, W, H);
+// binnenste uitsparing (rounded rect met cornerR)
+const mx = cornerR, my = cornerR;
+const mw = W - 2*cornerR, mh = H - 2*cornerR;
+ctx.moveTo(mx + cornerR, my);
+ctx.arcTo(mx + mw, my, mx + mw, my + mh, cornerR);
+ctx.arcTo(mx + mw, my + mh, mx, my + mh, cornerR);
+ctx.arcTo(mx, my + mh, mx, my, cornerR);
+ctx.arcTo(mx, my, mx + mw, my, cornerR);
+ctx.closePath();
+
+ctx.fillStyle = '#000';
+ctx.fill('evenodd');
+
+// 2. Vignette — donkere hoeken gradient
+const grad = ctx.createRadialGradient(W/2, H/2, H*0.25, W/2, H/2, H*0.7);
+grad.addColorStop(0, 'rgba(0,0,0,0)');
+grad.addColorStop(0.5, 'rgba(0,0,0,0)');
+grad.addColorStop(0.75, 'rgba(0,0,0,0.08)');
+grad.addColorStop(0.9, 'rgba(0,0,0,0.15)');
+grad.addColorStop(1, 'rgba(0,0,0,0.25)');
+ctx.fillStyle = grad;
+ctx.fillRect(cornerR, cornerR, W-2*cornerR, H-2*cornerR);
+
+// 3. Subtle green glow border aan de binnenrand
+ctx.strokeStyle = 'rgba(0,200,0,0.06)';
+ctx.lineWidth = 2;
+ctx.beginPath();
+ctx.roundRect(cornerR-1, cornerR-1, W-2*cornerR+2, H-2*cornerR+2, cornerR);
+ctx.stroke();
+
+// 4. Scanlines (subtiel)
+ctx.fillStyle = 'rgba(0,0,0,0.04)';
+for (let y = cornerR; y < H - cornerR; y += 3) {
+  ctx.fillRect(cornerR, y, W - 2*cornerR, 1);
+}
+
+// Output
+const dataUrl = c.toDataURL('image/png');
+console.log(dataUrl);
+document.body.innerHTML += '<img src="'+dataUrl+'" style="image-rendering:pixelated;">';
+document.body.innerHTML += '<br><span style="font-family:monospace;font-size:12px;">CRT MASK GENERATED — copy the data URL</span>';
+</script>
+</body></html>
