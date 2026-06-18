@@ -1141,7 +1141,7 @@ runBootSequence();
     });
     renderer.setSize(DISPLAY_W, DISPLAY_H);
     renderer.setPixelRatio(1); // Keep pixelated look
-    renderer.domElement.style.cssText = 'position:absolute;top:0;left:0;width:800px;height:600px;z-index:2;pointer-events:none;';
+    renderer.domElement.style.cssText = 'position:absolute;top:0;left:0;width:800px;height:600px;z-index:15;pointer-events:none;image-rendering:pixelated;';
     document.getElementById('game-container').appendChild(renderer.domElement);
 
     const scene = new THREE.Scene();
