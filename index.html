@@ -77,6 +77,18 @@ body {
 #crt-bezel #game-container {
   position: relative;
   width: 800px; height: 600px;
+  overflow: hidden;
+}
+
+#crt-mask {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 30;
+  border-radius: 40px;
+  box-shadow: inset 0 0 0 50px #0a0a0a, 0 0 0 100px #000;
+  background: radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0,0,0,0.30) 100%);
 }
 
 canvas {
@@ -232,7 +244,9 @@ body::after {
 <!-- CRT bezel + curvature -->
 <div id="crt-bezel">
 <div id="game-container">
-  <canvas id="game" width="800" height="600" style="filter:url(#barrel-distort);"></canvas>
+  <canvas id="game" width="800" height="600"></canvas>
+  <!-- CRT curved corners overlay — zwart mask met rond gat -->
+  <div id="crt-mask"></div>
   <div id="ui-overlay">
     <div class="left">
       SCORE<br><span id="scoreDisplay">00000</span>
@@ -1107,108 +1121,6 @@ function draw() {
   // Phosphor glow effect
   ctx.fillStyle = 'rgba(0,255,0,0.015)';
   ctx.fillRect(0, 0, W, H);
-
-  // ─── CRT BEZEL — zichtbare curved hoeken ───
-  // Simpele aanpak: teken zwarte bogen in alle 4 hoeken
-  const bw = 28; // bezel dikte
-  const br = 50; // curve radius
-
-  ctx.fillStyle = '#000';
-
-  // Bovenbalk
-  ctx.fillRect(0, 0, W, br);
-  // Onderbalk
-  ctx.fillRect(0, H - br, W, br);
-  // Linkerbalk
-  ctx.fillRect(0, 0, br, H);
-  // Rechterbalk
-  ctx.fillRect(W - br, 0, br, H);
-
-  // Hoekuitsparingen — cirkels in de hoeken die het zwart "wegsnijden"
-  // Boven-links: witte cirkel in de hoek
-  ctx.fillStyle = '#000'; // zwart
-  // Boven-links curve — teken een cirkel buiten het canvas zodat de hoek rond wordt
-  ctx.beginPath();
-  ctx.arc(br, br, br, Math.PI, 1.5 * Math.PI, false);
-  ctx.lineTo(br, 0);
-  ctx.lineTo(0, 0);
-  ctx.lineTo(0, br);
-  ctx.fill();
-
-  // Boven-rechts
-  ctx.beginPath();
-  ctx.arc(W - br, br, br, 1.5 * Math.PI, 2 * Math.PI, false);
-  ctx.lineTo(W, 0);
-  ctx.lineTo(W, br);
-  ctx.lineTo(W - br, br);
-  ctx.fill();
-
-  // Beneden-links
-  ctx.beginPath();
-  ctx.arc(br, H - br, br, 0.5 * Math.PI, Math.PI, false);
-  ctx.lineTo(0, H);
-  ctx.lineTo(0, H - br);
-  ctx.lineTo(br, H - br);
-  ctx.fill();
-
-  // Beneden-rechts
-  ctx.beginPath();
-  ctx.arc(W - br, H - br, br, 0, 0.5 * Math.PI, false);
-  ctx.lineTo(W - br, H);
-  ctx.lineTo(W, H);
-  ctx.lineTo(W, H - br);
-  ctx.fill();
-
-  // Nu de bezel balken INWENDIG (dunnere rand die over het beeld valt)
-  // Deze geven de illusie van diepte
-  ctx.fillStyle = '#000';
-  // Binnenrand boven
-  ctx.fillRect(br, 0, W - 2*br, bw);
-  // Binnenrand onder
-  ctx.fillRect(br, H - bw, W - 2*br, bw);
-  // Binnenrand links
-  ctx.fillRect(0, br, bw, H - 2*br);
-  // Binnenrand rechts
-  ctx.fillRect(W - bw, br, bw, H - 2*br);
-
-  // Cuve de hoeken van de binnenrand af
-  ctx.fillStyle = '#000';
-  // Boven-links binnen
-  ctx.beginPath();
-  ctx.arc(br + bw, br + bw, bw, Math.PI, 1.5 * Math.PI, false);
-  ctx.lineTo(br + bw, br);
-  ctx.lineTo(br, br);
-  ctx.lineTo(br, br + bw);
-  ctx.fill();
-
-  // Boven-rechts binnen
-  ctx.beginPath();
-  ctx.arc(W - br - bw, br + bw, bw, 1.5 * Math.PI, 2 * Math.PI, false);
-  ctx.lineTo(W - br, br);
-  ctx.lineTo(W - br, br + bw);
-  ctx.lineTo(W - br - bw, br + bw);
-  ctx.fill();
-
-  // Beneden-links binnen
-  ctx.beginPath();
-  ctx.arc(br + bw, H - br - bw, bw, 0.5 * Math.PI, Math.PI, false);
-  ctx.lineTo(br, H - br);
-  ctx.lineTo(br + bw, H - br);
-  ctx.lineTo(br + bw, H - br - bw);
-  ctx.fill();
-
-  // Beneden-rechts binnen
-  ctx.beginPath();
-  ctx.arc(W - br - bw, H - br - bw, bw, 0, 0.5 * Math.PI, false);
-  ctx.lineTo(W - br - bw, H - br);
-  ctx.lineTo(W - br, H - br);
-  ctx.lineTo(W - br, H - br - bw);
-  ctx.fill();
-
-  // CRT diepte glow — subtiele groene rand langs de binnenkant van de bezel
-  ctx.strokeStyle = 'rgba(0,180,0,0.08)';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(br + bw - 1, br + bw - 1, W - 2*(br + bw) + 2, H - 2*(br + bw) + 2);
 
   ctx.restore();
 }
