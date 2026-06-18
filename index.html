@@ -454,11 +454,11 @@ function render(){
     ctx.font=`18px ${MONO}`;ctx.fillStyle=FG;
     ctx.textAlign='left';ctx.textBaseline='top';
     glow(FG,8);
-    bootLines.forEach((l,i)=>ctx.fillText(l,30,30+i*LH));
+    bootLines.forEach((l,i)=>ctx.fillText(l,120,30+i*LH));
     if(blink){
       const last=bootLines[bootLines.length-1]||'';
       const cw=ctx.measureText(last).width;
-      ctx.fillRect(30+cw+2,30+(bootLines.length-1)*LH+LH-5,11,3);
+      ctx.fillRect(120+cw+2,30+(bootLines.length-1)*LH+LH-5,11,3);
     }
     noGlow();return;
   }
