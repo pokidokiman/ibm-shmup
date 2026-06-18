@@ -95,6 +95,34 @@ canvas {
 #game-over .score { font-size: 20px; margin-bottom: 20px; }
 #game-over .small { font-size: 14px; opacity: 0.7; }
 
+/* Boot screen */
+#boot-screen {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  display: none;
+  flex-direction: column;
+  justify-content: flex-start; align-items: flex-start;
+  color: #0f0; text-shadow: 0 0 8px #0f0;
+  z-index: 25;
+  background: #000;
+  padding: 40px 60px;
+  font-family: 'Courier New', monospace;
+}
+#boot-text {
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre;
+  text-align: left;
+}
+#boot-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 14px;
+  background: #0f0;
+  animation: blink 0.5s step-end infinite;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+}
+
 /* Scanline flicker */
 body::after {
   content: " ";
@@ -125,13 +153,20 @@ body::after {
     </div>
   </div>
 
+  <div id="boot-screen">
+    <div id="boot-text"></div>
+  </div>
+
   <div id="title-screen">
-    <h1>SHMUP</h1>
-    <div class="sub">┌────────────┐<br>│ IBM 5153 │<br>└────────────┘</div>
-    <div class="blink">□ INSERT COIN □</div>
-    <div style="margin-top:40px; font-size:14px; opacity:0.5;">
-      ARROWS/ZQSD ─ MOVE &nbsp;│&nbsp; SPACE/Z ─ FIRE<br>
-      P ─ PAUSE
+    <canvas id="matrix-canvas" width="800" height="600" style="position:absolute;top:0;left:0;z-index:1;pointer-events:none;background:transparent;"></canvas>
+    <div style="position:relative;z-index:2;display:flex;flex-direction:column;justify-content:center;align-items:center;height:100%;">
+      <h1>SHMUP</h1>
+      <div class="sub">┌────────────┐<br>│ IBM 5153 │<br>└────────────┘</div>
+      <div class="blink">□ INSERT COIN □</div>
+      <div style="margin-top:40px; font-size:14px; opacity:0.5;">
+        ARROWS/ZQSD ─ MOVE &nbsp;│&nbsp; SPACE/Z ─ FIRE<br>
+        P ─ PAUSE
+      </div>
     </div>
   </div>
 
@@ -175,6 +210,57 @@ function sfxGameOver() {
   setTimeout(() => playBlip(100, 0.4), 400);
 }
 
+// ─── FLOPPY DRIVE SEEK SOUND ───
+function sfxFloppySeek() {
+  try {
+    const duration = 0.8;
+    const sr = audioCtx.sampleRate;
+
+    // Create buffer of filtered noise
+    const bufSize = Math.floor(sr * duration);
+    const buffer = audioCtx.createBuffer(1, bufSize, sr);
+    const data = buffer.getChannelData(0);
+
+    // Generate band-limited noise with mechanical character
+    for (let i = 0; i < bufSize; i++) {
+      const t = i / sr;
+      // Low-frequency rumble (head moving)
+      const rumble = (Math.random() * 2 - 1) * 0.3;
+      // High-frequency scraping (head stepping on tracks)
+      const scrape = (Math.random() * 2 - 1) * 0.5;
+      // Click train - regular clicks as head steps across tracks
+      const clickRate = 60 + Math.sin(t * 8) * 20; // varying step rate
+      const clickPhase = (t * clickRate) % 1;
+      const click = clickPhase < 0.05 ? 0.7 : 0;
+      // Filter: low-pass via simple smoothing
+      data[i] = rumble * 0.3 + scrape * 0.5 + click * 0.8;
+    }
+    // Simple low-pass filter (moving average)
+    for (let i = 1; i < bufSize; i++) {
+      data[i] = data[i] * 0.4 + data[i-1] * 0.6;
+    }
+
+    const source = audioCtx.createBufferSource();
+    source.buffer = buffer;
+
+    // Bandpass filter to shape the sound mechanically
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 800;
+    filter.Q.value = 0.8;
+
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+
+    source.connect(filter);
+    filter.connect(gain);
+    gain.connect(audioCtx.destination);
+    source.start();
+    source.stop(audioCtx.currentTime + duration);
+  } catch(e) {}
+}
+
 // ─── CANVAS ───
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -212,6 +298,196 @@ let spawnTimer = 0;
 let waveTimer = 0;
 let comboCounter = 0;
 let comboTimer = 0;
+
+// ─── BOOT SEQUENCE ───
+const bootScreen = document.getElementById('boot-screen');
+const bootTextEl = document.getElementById('boot-text');
+let bootRunning = false;
+let bootSequenceCompleted = false;
+
+function runBootSequence() {
+  bootRunning = true;
+  bootScreen.style.display = 'flex';
+  titleScreen.style.display = 'none';
+  gameOverScreen.style.display = 'none';
+
+  const lines = [
+    { text: '', delay: 300 },
+    { text: 'IBM 5153 BIOS v1.11 01/10/84', delay: 400 },
+    { text: 'Copyright 1984 IBM Corp.', delay: 300 },
+    { text: '', delay: 200 },
+    { text: '  CPU: Intel 8088 @ 4.77 MHz', delay: 200 },
+    { text: '  Coprocessor: None', delay: 150 },
+    { text: '', delay: 150 },
+    { text: 'Memory Test: ', delay: 100, isMemTest: true },
+    { text: '', delay: 200 },
+    { text: '  IBM SHMUP v1.0 detected', delay: 500 },
+    { text: '', delay: 150 },
+    { text: '  2 Floppy drive(s) detected', delay: 400 },
+    { text: '', delay: 200 },
+    { text: '  Starting MS-DOS...', delay: 800 },
+    { text: '', delay: 400 },
+  ];
+
+  let lineIdx = 0;
+  let charIdx = 0;
+  let memCount = 0;
+  let memInterval = null;
+  let bootText = '';
+  let currentLine = '';
+
+  function typeNextChar() {
+    if (lineIdx >= lines.length) {
+      // Boot sequence done, transition to title
+      setTimeout(() => {
+        bootScreen.style.display = 'none';
+        bootRunning = false;
+        bootSequenceCompleted = true;
+        titleScreen.style.display = 'flex';
+        startMatrixRain();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+      }, 600);
+      return;
+    }
+
+    const line = lines[lineIdx];
+
+    if (line.isMemTest) {
+      // Memory test animation
+      currentLine = line.text;
+      memCount = 0;
+      if (memInterval) clearInterval(memInterval);
+      memInterval = setInterval(() => {
+        memCount += Math.floor(8 + Math.random() * 24);
+        if (memCount >= 640) {
+          memCount = 640;
+          clearInterval(memInterval);
+          memInterval = null;
+          bootText += currentLine + '0640 KB OK\n';
+          bootTextEl.textContent = bootText + '█';
+          // Play a little beep for POST completion
+          try { playBlip(1000, 0.05, 'square', 0.04); } catch(e) {}
+          lineIdx++;
+          setTimeout(typeNextChar, 300);
+          return;
+        }
+        bootText += '\r' + currentLine + String(memCount).padStart(4, ' ') + ' KB';
+        bootTextEl.textContent = bootText + '█';
+      }, 40);
+      return;
+    }
+
+    // Regular line: type it out character by character
+    if (charIdx < line.text.length) {
+      bootText += line.text[charIdx];
+      charIdx++;
+      bootTextEl.textContent = bootText + '█';
+      const delay = line.text[charIdx - 1] === ' ' ? 20 : 25 + Math.random() * 30;
+      setTimeout(typeNextChar, delay);
+    } else {
+      bootText += '\n';
+      charIdx = 0;
+      lineIdx++;
+      bootTextEl.textContent = bootText + '█';
+      setTimeout(typeNextChar, line.delay);
+    }
+  }
+
+  bootText = '';
+  bootTextEl.textContent = '█';
+  setTimeout(typeNextChar, 200);
+}
+
+// ─── MATRIX RAIN ON TITLE ───
+const matrixCanvas = document.getElementById('matrix-canvas');
+const matrixCtx = matrixCanvas.getContext('2d');
+let matrixDrops = [];
+let matrixAnimId = null;
+
+const matrixChars = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+function startMatrixRain() {
+  const cols = Math.floor(800 / 14);
+  matrixDrops = [];
+  for (let i = 0; i < cols; i++) {
+    matrixDrops[i] = Math.floor(Math.random() * -100);
+  }
+  if (matrixAnimId) cancelAnimationFrame(matrixAnimId);
+  drawMatrixRain();
+}
+
+function drawMatrixRain() {
+  matrixCtx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+  matrixCtx.fillRect(0, 0, 800, 600);
+  matrixCtx.font = '12px monospace';
+  matrixCtx.textAlign = 'center';
+
+  for (let i = 0; i < matrixDrops.length; i++) {
+    const x = i * 14 + 7;
+    const y = matrixDrops[i] * 14;
+    // Leading character brighter
+    const char = matrixChars[Math.floor(Math.random() * matrixChars.length)];
+    matrixCtx.fillStyle = 'rgba(0,255,0,0.06)';
+    matrixCtx.fillText(char, x, y);
+    // Bright head
+    matrixCtx.fillStyle = 'rgba(0,255,0,0.3)';
+    matrixCtx.fillText(char, x, y - 14);
+    matrixDrops[i] += 0.5;
+    if (matrixDrops[i] * 14 > 600 && Math.random() > 0.975) {
+      matrixDrops[i] = 0;
+    }
+  }
+  matrixAnimId = requestAnimationFrame(drawMatrixRain);
+}
+
+function stopMatrixRain() {
+  if (matrixAnimId) {
+    cancelAnimationFrame(matrixAnimId);
+    matrixAnimId = null;
+  }
+  matrixCtx.clearRect(0, 0, 800, 600);
+}
+
+// ─── CRTC 6845 RASTER EFFECTS ───
+let screenShake = { x: 0, y: 0, intensity: 0 };
+let rasterTear = { active: false, offset: 0, timer: 0 };
+let syncJitter = 0;
+
+function triggerScreenShake(intensity) {
+  screenShake.intensity = Math.max(screenShake.intensity, intensity);
+}
+
+function triggerRasterTear() {
+  rasterTear.active = true;
+  rasterTear.offset = Math.floor(Math.random() * 200) - 100;
+  rasterTear.timer = 20;
+}
+
+function updateRasterEffects() {
+  // Screen shake decay
+  if (screenShake.intensity > 0) {
+    screenShake.x = (Math.random() - 0.5) * screenShake.intensity * 6;
+    screenShake.y = (Math.random() - 0.5) * screenShake.intensity * 4;
+    screenShake.intensity *= 0.85;
+    if (screenShake.intensity < 0.3) {
+      screenShake.intensity = 0;
+      screenShake.x = 0;
+      screenShake.y = 0;
+    }
+  }
+
+  // Raster tear decay
+  if (rasterTear.active) {
+    rasterTear.timer--;
+    if (rasterTear.timer <= 0) {
+      rasterTear.active = false;
+      rasterTear.offset = 0;
+    }
+  }
+
+  // Subtle sync jitter
+  syncJitter = (Math.random() - 0.5) * 0.6;
+}
 
 // ─── PLAYER ───
 function createPlayer() {
@@ -302,16 +578,25 @@ function resetGame() {
 }
 
 function startGame() {
+  if (bootRunning) return;
+  if (!bootSequenceCompleted) {
+    runBootSequence();
+    bootSequenceCompleted = true;
+    return;
+  }
   resetGame();
   gameState = 'playing';
   titleScreen.style.display = 'none';
   gameOverScreen.style.display = 'none';
+  stopMatrixRain();
   if (audioCtx.state === 'suspended') audioCtx.resume();
 }
 
 // ─── SPAWNING ───
 function spawnWave() {
   wave++;
+  // Play floppy drive seek sound on new wave
+  sfxFloppySeek();
   const cols = 7;
   const rows = Math.min(2 + Math.floor(wave / 2), 5);
   const spacingX = 80;
@@ -464,6 +749,12 @@ function update() {
           particles.push(...createParticle(e.x, e.y, '#0f0', 12));
           particles.push(...createParticle(e.x, e.y, '#ff0', 6));
           sfxExplode();
+          // Screen shake on enemy death - bigger for tougher enemies
+          if (e.maxHp >= 2) {
+            triggerScreenShake(2 + e.maxHp);
+          } else {
+            triggerScreenShake(0.5);
+          }
           spawnPowerup(e.x, e.y);
         } else {
           sfxHit();
@@ -531,6 +822,8 @@ function hitPlayer() {
   player.power = Math.max(1, player.power - 1);
   particles.push(...createParticle(player.x, player.y, '#f00', 20));
   sfxGameOver();
+  // Raster tear effect on player hit
+  triggerRasterTear();
 
   if (lives <= 0) {
     gameOver();
@@ -564,6 +857,19 @@ function drawText(x, y, lines, color = '#0f0') {
 }
 
 function draw() {
+  ctx.save();
+
+  // ─── CRTC 6845 RASTER EFFECTS ───
+  updateRasterEffects();
+
+  // Screen shake
+  if (screenShake.intensity > 0) {
+    ctx.translate(screenShake.x, screenShake.y);
+  }
+
+  // Subtle horizontal sync jitter
+  ctx.translate(syncJitter, 0);
+
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, W, H);
 
@@ -673,9 +979,37 @@ function draw() {
     }
   }
 
+  // ─── RASTER TEAR (CRTC 6845 scanline offset) ───
+  if (rasterTear.active) {
+    ctx.save();
+    // Create a tearing effect by drawing a shifted copy of the top portion
+    const tearY = 200 + Math.sin(frame * 0.3) * 60;
+    const tearH = 40;
+    ctx.beginPath();
+    ctx.rect(0, tearY, W, tearH);
+    ctx.clip();
+    ctx.translate(rasterTear.offset * 0.5, 0);
+    // Redraw a shifted copy of the torn area
+    ctx.fillStyle = 'rgba(0,255,0,0.03)';
+    ctx.fillRect(0, tearY, W, tearH);
+    // Horizontal displacement lines
+    ctx.strokeStyle = 'rgba(0,255,0,0.15)';
+    ctx.lineWidth = 1;
+    for (let scanY = 0; scanY < tearH; scanY += 4) {
+      const scanShift = Math.sin(scanY * 0.5 + frame * 0.2) * 3;
+      ctx.beginPath();
+      ctx.moveTo(0, tearY + scanY);
+      ctx.lineTo(W, tearY + scanY);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   // Phosphor glow effect
   ctx.fillStyle = 'rgba(0,255,0,0.015)';
   ctx.fillRect(0, 0, W, H);
+
+  ctx.restore();
 }
 
 // ─── GAME LOOP ───
@@ -695,7 +1029,11 @@ document.addEventListener('keydown', (e) => {
     gameState = 'playing';
   }
 
+  // Also handle Space/Enter during boot to skip quickly, or during title
   if (gameState === 'title' && (e.code === 'Space' || e.code === 'Enter')) {
+    if (bootRunning) {
+      // Skip boot — handled via a flag
+    }
     startGame();
   }
 
@@ -715,6 +1053,10 @@ document.addEventListener('keyup', (e) => {
 
 // ─── START ───
 hiScoreSpan.textContent = String(hiScore).padStart(5, '0');
+// Start with boot sequence
+titleScreen.style.display = 'none';
+bootScreen.style.display = 'flex';
+runBootSequence();
 gameLoop();
 </script>
 </body>
