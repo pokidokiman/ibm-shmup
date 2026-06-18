@@ -19,11 +19,7 @@ canvas{width:100%;height:100%;display:block}
 <body>
 <div id="canvas-container">
   <div id="boot-overlay" style="display:none"></div>
-  <div id="title-overlay" style="display:none">
-    <h1>SHMUP</h1>
-    <div class="box">IBM 5153</div>
-    <div class="blink" style="margin-top:30px">□ INSERT COIN □</div>
-    <div style="margin-top:40px;font-size:14px;opacity:0.5">ARROWS/ZQSD ─ MOVE │ SPACE/Z ─ FIRE<br>P ─ PAUSE</div>
+  <div id="title-overlay" style="display:none;visibility:hidden">
   </div>
 </div>
 <script>
@@ -58,7 +54,7 @@ function reset(){score=0;lives=3;wave=0;frame=0;cc=0;ct=0;pl=mkPl();buls=[];enem
 // ─── BOOT ───
 const bootEl=document.getElementById('boot-overlay');
 const titleEl=document.getElementById('title-overlay');
-let br=false,bd=false;
+let br=false,bd=false,showTitle=false;
 const bL=[
   {t:'',d:200},{t:'IBM 5153 BIOS v1.11 01/10/84',d:300},{t:'Copyright 1984 IBM Corp.',d:200},{t:'',d:150},
   {t:'  CPU: Intel 8088 @ 4.77 MHz',d:150},{t:'  Coprocessor: None',d:100},{t:'',d:100},
@@ -69,7 +65,7 @@ function boot(){
   br=true;bd=false;bootEl.style.display='none';titleEl.style.display='none';
   let li=0,ci=0,mem=0,bt='';
   function n(){
-    if(li>=bL.length){bt+='\n\n$ INSERT COIN';bootEl.textContent=bt;br=false;bd=true;titleEl.style.display='flex';return}
+    if(li>=bL.length){bt+='\n\n$ INSERT COIN';bootEl.textContent=bt;br=false;bd=true;showTitle=true;return}
     const l=bL[li];
     if(l.mem){
       mem=0;(function mt(){
@@ -88,7 +84,8 @@ function boot(){
 function start(){
   if(br)return;
   if(!bd){boot();bd=true;return}
-  reset();gs='playing';titleEl.style.display='none';bootEl.style.display='none';
+  showTitle=false;
+  reset();gs='playing';bootEl.style.display='none';
   if(ac.state==='suspended')ac.resume()
 }
 
@@ -150,7 +147,7 @@ function draw(){
     ctx.shadowBlur=0
   }
   // Draw title text to canvas if visible
-  if(titleEl.style.display!=='none'){
+  if(showTitle){
     ctx.fillStyle='#33ff33';ctx.shadowBlur=6;ctx.shadowColor='#33ff33';ctx.font='48px "Courier New", monospace';ctx.textAlign='center';
     ctx.fillText('SHMUP',W/2,200);
     ctx.font='18px "Courier New", monospace';ctx.fillText('IBM 5153',W/2,280);
@@ -225,7 +222,7 @@ document.addEventListener('keydown',e=>{
   if(e.code==='KeyP'&&gs==='playing')gs='paused';
   else if(e.code==='KeyP'&&gs==='paused')gs='playing';
   if(e.code==='Space'||e.code==='Enter'){
-    if(br){br=false;bd=true;titleEl.style.display='flex';bootEl.style.display='none'}
+    if(br){br=false;bd=true;showTitle=true;bootEl.style.display='none'}
     else if(gs==='title'||gs==='gameover')start()
   }
   if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault()
