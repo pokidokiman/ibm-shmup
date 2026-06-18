@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <title>IBM CRT Test</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #020202;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            max-width: 1024px;
+            max-height: 768px;
+            aspect-ratio: 4 / 3;
+            box-shadow: 0 0 100px rgba(0,0,0,0.8);
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    <script>
+        // ─── 1. Shader Code ───
+        const vertexShader = `
+            varying vec2 vUv;
+            void main() {
+                vUv = uv;
+                gl_Position = vec4(position, 1.0);
+            }
+        `;
+
+        const fragmentShader = `
+            uniform sampler2D tDiffuse;
+            uniform float uTime;
+            varying vec2 vUv;
+
+            vec2 curve(vec2 uv) {
+                uv = (uv - 0.5) * 2.0;
+                uv.x *= 1.0 + pow((abs(uv.y) / 4.0), 2.0);
+                uv.y *= 1.0 + pow((abs(uv.x) / 3.0), 2.0);
+                uv = (uv / 2.0) + 0.5;
+                uv = uv * 0.92 + 0.04;
+                return uv;
+            }
+
+            void main() {
+                vec2 uv = curve(vUv);
+                if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
+                    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+                    return;
+                }
+                float r = texture2D(tDiffuse, uv + vec2(0.0015, 0.0)).r;
+                float g = texture2D(tDiffuse, uv).g;
+                float b = texture2D(tDiffuse, uv - vec2(0.0015, 0.0)).b;
+                vec3 color = vec3(r, g, b);
+                float scanline = sin(uv.y * 800.0) * 0.12;
+                color -= scanline;
+                color *= 1.0 + 0.01 * sin(uTime * 20.0);
+                float vignette = uv.x * uv.y * (1.0 - uv.x) * (1.0 - uv.y);
+                vignette = clamp(pow(16.0 * vignette, 0.4), 0.0, 1.0);
+                color *= vignette;
+                gl_FragColor = vec4(color, 1.0);
+            }
+        `;
+
+        // ─── 2. Tekst naar canvas ───
+        const textCanvas = document.createElement('canvas');
+        textCanvas.width = 1024;
+        textCanvas.height = 768;
+        const ctx = textCanvas.getContext('2d');
+
+        function drawContent(time) {
+            ctx.fillStyle = '#020a02';
+            ctx.fillRect(0, 0, textCanvas.width, textCanvas.height);
+            ctx.fillStyle = '#33ff33';
+            ctx.shadowBlur = 12;
+            ctx.shadowColor = '#33ff33';
+            ctx.font = '32px "Courier New", monospace';
+            ctx.fillText("IBM Personal Computer", 80, 100);
+            ctx.fillText("Version 1.10 (C)Copyright IBM Corp 1981, 1982", 80, 150);
+            ctx.fillText("640 KB System RAM Passed", 80, 220);
+            ctx.fillText("A> dir", 80, 300);
+            ctx.fillText("COMMAND  COM    4956  12-08-82  11:45a", 80, 350);
+            ctx.fillText("ANSI     SYS    2145  12-08-82  11:45a", 80, 400);
+            ctx.fillText("A>", 80, 480);
+            if (Math.floor(time * 2) % 2 === 0) {
+                ctx.fillRect(130, 455, 25, 30);
+            }
+        }
+
+        // ─── 3. Three.js Setup ───
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        container.appendChild(renderer.domElement);
+
+        const texture = new THREE.CanvasTexture(textCanvas);
+        texture.minFilter = THREE.LinearFilter;
+
+        const uniforms = {
+            tDiffuse: { value: texture },
+            uTime: { value: 0 }
+        };
+
+        const material = new THREE.ShaderMaterial({
+            vertexShader: vertexShader,
+            fragmentShader: fragmentShader,
+            uniforms: uniforms
+        });
+
+        const geometry = new THREE.PlaneGeometry(2, 2);
+        const mesh = new THREE.Mesh(geometry, material);
+        scene.add(mesh);
+
+        // ─── 4. Animation Loop ───
+        const clock = new THREE.Clock();
+        function animate() {
+            requestAnimationFrame(animate);
+            const elapsed = clock.getElapsedTime();
+            uniforms.uTime.value = elapsed;
+            drawContent(elapsed);
+            texture.needsUpdate = true;
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>

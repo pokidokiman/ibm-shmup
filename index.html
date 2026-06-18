@@ -3,1248 +3,210 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IBM SHMUP - INSERT COIN</title>
+<title>IBM SHMUP - CRT TEST</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <style>
-@font-face {
-  font-family: 'IBM';
-  src: local('Courier New'), local('Lucida Console'), local('monospace');
-}
-
 * { margin: 0; padding: 0; box-sizing: border-box; }
-
 body {
   background: #000;
   display: flex; justify-content: center; align-items: center;
-  min-height: 100vh; font-family: 'IBM', monospace;
+  min-height: 100vh; font-family: 'Courier New', monospace;
   overflow: hidden;
 }
-
-/* CRT overlay — barrel distortion + scanlines + vignette */
-.crt::before {
-  content: " ";
-  position: fixed; top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: repeating-linear-gradient(
-    0deg,
-    rgba(0,0,0,0.12) 0px,
-    rgba(0,0,0,0.12) 1px,
-    transparent 1px,
-    transparent 3px
-  );
-  pointer-events: none;
-  z-index: 100;
-}
-
-#crt-bezel #game-container {
-  /* Barrel distortion via SVG filter (feDisplacementMap) */
-}
-
-/* CRT vignette — donkere hoeken, glow in centrum */
-#crt-bezel::after {
-  content: " ";
-  position: absolute; top: -10px; left: -10px;
-  width: calc(100% + 20px); height: calc(100% + 20px);
-  background: radial-gradient(
-    ellipse at center,
-    transparent 55%,
-    rgba(0,0,0,0.15) 75%,
-    rgba(0,0,0,0.35) 100%
-  );
-  pointer-events: none;
-  z-index: 5;
-  border-radius: 12px;
-}
-
-.crt {
-  position: relative;
-}
-
-#crt-bezel {
-  position: relative;
-  perspective: 800px;
-  width: 824px; height: 624px;
-  background: #000;
-  outline: 4px solid #0a0;
-  outline-offset: 2px;
-  box-shadow: 0 0 40px rgba(0,255,0,0.2), 0 0 60px rgba(0,255,0,0.08);
-  image-rendering: pixelated;
-  margin: 10px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  border-radius: 42px;
-}
-
-#crt-bezel #game-container {
+#game-container {
   position: relative;
   width: 800px; height: 600px;
   overflow: hidden;
 }
-
-canvas {
+#game-canvas {
   display: block;
   width: 800px; height: 600px;
   background: #000;
   image-rendering: pixelated;
-  image-rendering: crisp-edges;
 }
-/* CRT mask over het canvas — retromator style */
-#crt-frame {
+#three-canvas {
   position: absolute;
   top: 0; left: 0;
   width: 800px; height: 600px;
   pointer-events: none;
-  z-index: 25;
-  image-rendering: pixelated;
-}
-
-#ui-overlay {
-  position: absolute; top: 0; left: 0; right: 0;
-  padding: 8px 16px;
-  display: flex; justify-content: space-between;
-  font-size: 14px; color: #0f0; text-shadow: 0 0 8px #0f0;
-  pointer-events: none;
-  z-index: 10;
-}
-
-#ui-overlay .right { text-align: right; }
-#ui-overlay .left { text-align: left; }
-#game-over, #title-screen {
-  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-  display: flex; flex-direction: column;
-  justify-content: center; align-items: center;
-  color: #0f0; text-shadow: 0 0 12px #0f0;
-  z-index: 20; pointer-events: none;
-}
-#title-screen { pointer-events: auto; }
-#title-screen h1 {
-  font-size: 48px; letter-spacing: 12px;
-  margin-bottom: 10px;
-}
-#title-screen .sub {
-  font-size: 18px; opacity: 0.7; margin-bottom: 40px;
-}
-#title-screen .sub .box {
-  font-family: 'Courier New', 'IBM 3270', 'Lucida Console', monospace;
-  font-size: 16px;
-  letter-spacing: 1px;
-  line-height: 1;
-  display: inline-block;
-  padding: 10px 30px;
-  border: 2px solid #0f0;
-  box-shadow: 0 0 8px rgba(0,255,0,0.15);
-  color: #0f0;
-  text-shadow: 0 0 6px #0f0;
-}
-#title-screen .blink {
-  font-size: 22px;
-  animation: blink 1s step-end infinite;
-}
-@keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
-
-#game-over {
-  display: none;
-}
-#game-over .big { font-size: 36px; margin-bottom: 16px; letter-spacing: 6px; }
-#game-over .score { font-size: 20px; margin-bottom: 20px; }
-#game-over .small { font-size: 14px; opacity: 0.7; }
-
-/* Boot screen */
-#boot-screen {
-  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-  display: none;
-  flex-direction: column;
-  justify-content: flex-start; align-items: flex-start;
-  color: #0f0; text-shadow: 0 0 8px #0f0;
-  z-index: 25;
-  background: #000;
-  padding: 40px 60px;
-  font-family: 'Courier New', monospace;
-}
-#boot-text {
-  font-size: 14px;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  overflow-wrap: break-word;
-  word-break: break-all;
-  text-align: left;
-  max-width: 100%;
-  padding: 20px;
-}
-#boot-cursor {
-  display: inline-block;
-  width: 8px;
-  height: 14px;
-  background: #0f0;
-  animation: blink 0.5s step-end infinite;
-  margin-left: 2px;
-  vertical-align: text-bottom;
-}
-
-/* Scanline flicker */
-body::after {
-  content: " ";
-  position: fixed; top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.3) 100%);
-  pointer-events: none;
-  z-index: 99;
+  z-index: 2;
 }
 </style>
 </head>
-<body class="crt">
-
-<!-- CRT barrel distortion — WebGL via CRTFilter.js -->
-
-<!-- CRT bezel + curvature -->
-<div id="crt-bezel">
+<body>
 <div id="game-container">
-  <canvas id="game" width="800" height="600"></canvas>
-  <!-- CRT mask — retromator style PNG overlay met curved bezel -->
-  <img id="crt-frame" src="data:image/png;base64,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">
-  <div id="ui-overlay">
-    <div class="left">
-      SCORE<br><span id="scoreDisplay">00000</span>
-    </div>
-    <div class="right">
-      HI-SCORE<br><span id="hiScoreDisplay">00000</span>
-    </div>
-  </div>
-
-  <div id="boot-screen">
-    <div id="boot-text"></div>
-  </div>
-
-  <div id="title-screen">
-    <canvas id="matrix-canvas" width="800" height="600" style="position:absolute;top:0;left:0;z-index:1;pointer-events:none;background:transparent;"></canvas>
-    <div style="position:relative;z-index:2;display:flex;flex-direction:column;justify-content:center;align-items:center;height:100%;">
-      <h1>SHMUP</h1>
-      <div class="sub"><div class="box">IBM 5153</div></div>
-      <div class="blink">□ INSERT COIN □</div>
-      <div style="margin-top:40px; font-size:14px; opacity:0.5;">
-        ARROWS/ZQSD ─ MOVE &nbsp;│&nbsp; SPACE/Z ─ FIRE<br>
-        P ─ PAUSE
-      </div>
-    </div>
-  </div>
-
-  <div id="game-over">
-    <div class="big">GAME OVER</div>
-    <div class="score">SCORE: <span id="finalScore">0</span></div>
-    <div class="small blink" style="margin-top:20px;">PRESS SPACE TO CONTINUE</div>
-  </div>
+  <canvas id="game-canvas" width="640" height="480"></canvas>
+  <div id="boot-text" style="position:absolute;top:0;left:0;width:100%;height:100%;color:#0f0;padding:40px;font-size:14px;font-family:'Courier New',monospace;z-index:1;pointer-events:none;text-shadow:0 0 8px #0f0;"></div>
 </div>
-
 <script>
-// ─── AUDIO (Web Audio blips) ───
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-function playBlip(freq, duration, type = 'square', vol = 0.08) {
-  try {
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = type;
-    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-    gain.gain.setValueAtTime(vol, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.start();
-    osc.stop(audioCtx.currentTime + duration);
-  } catch(e) {}
-}
-
-function sfxShoot() { playBlip(800, 0.08, 'square', 0.05); }
-function sfxHit() { playBlip(200, 0.15, 'sawtooth', 0.08); }
-function sfxExplode() {
-  playBlip(100, 0.3, 'sawtooth', 0.1);
-  playBlip(60, 0.4, 'square', 0.06);
-}
-function sfxPowerup() {
-  playBlip(600, 0.1); setTimeout(() => playBlip(900, 0.15), 100);
-}
-function sfxGameOver() {
-  playBlip(300, 0.2); setTimeout(() => playBlip(200, 0.2), 200);
-  setTimeout(() => playBlip(100, 0.4), 400);
-}
-
-// ─── FLOPPY DRIVE SEEK SOUND ───
-function sfxFloppySeek() {
-  try {
-    const duration = 0.8;
-    const sr = audioCtx.sampleRate;
-
-    // Create buffer of filtered noise
-    const bufSize = Math.floor(sr * duration);
-    const buffer = audioCtx.createBuffer(1, bufSize, sr);
-    const data = buffer.getChannelData(0);
-
-    // Generate band-limited noise with mechanical character
-    for (let i = 0; i < bufSize; i++) {
-      const t = i / sr;
-      // Low-frequency rumble (head moving)
-      const rumble = (Math.random() * 2 - 1) * 0.3;
-      // High-frequency scraping (head stepping on tracks)
-      const scrape = (Math.random() * 2 - 1) * 0.5;
-      // Click train - regular clicks as head steps across tracks
-      const clickRate = 60 + Math.sin(t * 8) * 20; // varying step rate
-      const clickPhase = (t * clickRate) % 1;
-      const click = clickPhase < 0.05 ? 0.7 : 0;
-      // Filter: low-pass via simple smoothing
-      data[i] = rumble * 0.3 + scrape * 0.5 + click * 0.8;
-    }
-    // Simple low-pass filter (moving average)
-    for (let i = 1; i < bufSize; i++) {
-      data[i] = data[i] * 0.4 + data[i-1] * 0.6;
-    }
-
-    const source = audioCtx.createBufferSource();
-    source.buffer = buffer;
-
-    // Bandpass filter to shape the sound mechanically
-    const filter = audioCtx.createBiquadFilter();
-    filter.type = 'bandpass';
-    filter.frequency.value = 800;
-    filter.Q.value = 0.8;
-
-    const gain = audioCtx.createGain();
-    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
-
-    source.connect(filter);
-    filter.connect(gain);
-    gain.connect(audioCtx.destination);
-    source.start();
-    source.stop(audioCtx.currentTime + duration);
-  } catch(e) {}
-}
-
-// ─── CANVAS ───
-const canvas = document.getElementById('game');
+const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
 const W = 640, H = 480;
-canvas.width = W;
-canvas.height = H;
 
-// UI elements
-const scoreSpan = document.getElementById('scoreDisplay');
-const hiScoreSpan = document.getElementById('hiScoreDisplay');
-const titleScreen = document.getElementById('title-screen');
-const gameOverScreen = document.getElementById('game-over');
-const finalScoreSpan = document.getElementById('finalScore');
-
-// ─── GAME STATE ───
-const Glyphs = {
-  player: [' ▲ ', '╱ ╲', '╲ ╱', ' │ '],
-  playerFire: ['│'],
-  enemy1: ['┌─┐', '│O│', '└─┘'],
-  enemy2: ['┌┴┐', '├[┤', '└┬┘'],
-  enemy3: [' /\\ ', '/OO\\', '│  │'],
-  bullet: ['│'],
-  powerup: [' ╔═╗ ', ' ║P║ ', ' ╚═╝ '],
-  explosion: ['*','+','×'],
-};
-
-let gameState = 'title'; // title | playing | paused | gameover
-let score = 0;
-let hiScore = parseInt(localStorage.getItem('ibmShmupHiScore')) || 0;
-let lives = 3;
-let level = 1;
-let wave = 0;
-let frame = 0;
-let keys = {};
-let player, bullets, enemies, enemyBullets, powerups, particles;
-let spawnTimer = 0;
-let waveTimer = 0;
-let comboCounter = 0;
-let comboTimer = 0;
-
-// ─── BOOT SEQUENCE ───
-const bootScreen = document.getElementById('boot-screen');
+// ─── Boot text (HTML + Canvas) ───
 const bootTextEl = document.getElementById('boot-text');
-let bootRunning = false;
-let bootSequenceCompleted = false;
+let bootText = '';
+let bootDone = false;
 
-function runBootSequence() {
-  bootRunning = true;
-  bootScreen.style.display = 'flex';
-  titleScreen.style.display = 'none';
-  gameOverScreen.style.display = 'none';
-
-  const lines = [
-    { text: '', delay: 300 },
-    { text: 'IBM 5153 BIOS v1.11 01/10/84', delay: 400 },
-    { text: 'Copyright 1984 IBM Corp.', delay: 300 },
-    { text: '', delay: 200 },
-    { text: '  CPU: Intel 8088 @ 4.77 MHz', delay: 200 },
-    { text: '  Coprocessor: None', delay: 150 },
-    { text: '', delay: 150 },
-    { text: 'Memory Test:     ', delay: 100, isMemTest: true },
-    { text: '', delay: 200 },
-    { text: '  IBM SHMUP v1.0 detected', delay: 500 },
-    { text: '', delay: 150 },
-    { text: '  2 Floppy drive(s) detected', delay: 400 },
-    { text: '', delay: 200 },
-    { text: '  Starting MS-DOS...', delay: 800 },
-    { text: '', delay: 400 },
-  ];
-
-  let lineIdx = 0;
-  let charIdx = 0;
-  let memCount = 0;
-  let memInterval = null;
-  let bootText = '';
-  let currentLine = '';
-
-  function typeNextChar() {
-    if (lineIdx >= lines.length) {
-      // Boot sequence done, transition to title
-      setTimeout(() => {
-        bootScreen.style.display = 'none';
-        bootRunning = false;
-        bootSequenceCompleted = true;
-        titleScreen.style.display = 'flex';
-        startMatrixRain();
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-      }, 600);
-      return;
-    }
-
-    const line = lines[lineIdx];
-
-    if (line.isMemTest) {
-      // Memory test animation
-      currentLine = line.text;
-      memCount = 0;
-      if (memInterval) clearInterval(memInterval);
-      memInterval = setInterval(() => {
-        memCount += Math.floor(8 + Math.random() * 24);
-        if (memCount >= 640) {
-          memCount = 640;
-          clearInterval(memInterval);
-          memInterval = null;
-          bootText += currentLine + '0640 KB OK\n';
-          bootTextEl.textContent = bootText + '█';
-          // Play a little beep for POST completion
-          try { playBlip(1000, 0.05, 'square', 0.04); } catch(e) {}
-          lineIdx++;
-          setTimeout(typeNextChar, 300);
-          return;
-        }
-        // Memory test — replace last line instead of appending
-        const memLine = currentLine + String(memCount).padStart(4, ' ') + ' KB';
-        const linesArr = bootText.split('\n');
-        if (linesArr.length > 0 && linesArr[linesArr.length-1].startsWith(currentLine.trim())) {
-          linesArr[linesArr.length-1] = memLine;
-        } else {
-          linesArr.push(memLine);
-        }
-        bootText = linesArr.join('\n');
-        bootTextEl.textContent = bootText + '█';
-      }, 40);
-      return;
-    }
-
-    // Regular line: type it out character by character
-    if (charIdx < line.text.length) {
-      bootText += line.text[charIdx];
-      charIdx++;
-      bootTextEl.textContent = bootText + '█';
-      const delay = line.text[charIdx - 1] === ' ' ? 20 : 25 + Math.random() * 30;
-      setTimeout(typeNextChar, delay);
-    } else {
-      bootText += '\n';
-      charIdx = 0;
-      lineIdx++;
-      bootTextEl.textContent = bootText + '█';
-      setTimeout(typeNextChar, line.delay);
-    }
-  }
-
-  bootText = '';
-  bootTextEl.textContent = '█';
-  setTimeout(typeNextChar, 200);
-}
-
-// ─── MATRIX RAIN ON TITLE ───
-const matrixCanvas = document.getElementById('matrix-canvas');
-const matrixCtx = matrixCanvas.getContext('2d');
-let matrixDrops = [];
-let matrixAnimId = null;
-
-const matrixChars = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-
-function startMatrixRain() {
-  const cols = Math.floor(800 / 14);
-  matrixDrops = [];
-  for (let i = 0; i < cols; i++) {
-    matrixDrops[i] = Math.floor(Math.random() * -100);
-  }
-  if (matrixAnimId) cancelAnimationFrame(matrixAnimId);
-  drawMatrixRain();
-}
-
-function drawMatrixRain() {
-  matrixCtx.fillStyle = 'rgba(0, 0, 0, 0.08)';
-  matrixCtx.fillRect(0, 0, 800, 600);
-  matrixCtx.font = '12px monospace';
-  matrixCtx.textAlign = 'center';
-
-  for (let i = 0; i < matrixDrops.length; i++) {
-    const x = i * 14 + 7;
-    const y = matrixDrops[i] * 14;
-    // Leading character brighter
-    const char = matrixChars[Math.floor(Math.random() * matrixChars.length)];
-    matrixCtx.fillStyle = 'rgba(0,255,0,0.06)';
-    matrixCtx.fillText(char, x, y);
-    // Bright head
-    matrixCtx.fillStyle = 'rgba(0,255,0,0.3)';
-    matrixCtx.fillText(char, x, y - 14);
-    matrixDrops[i] += 0.5;
-    if (matrixDrops[i] * 14 > 600 && Math.random() > 0.975) {
-      matrixDrops[i] = 0;
-    }
-  }
-  matrixAnimId = requestAnimationFrame(drawMatrixRain);
-}
-
-function stopMatrixRain() {
-  if (matrixAnimId) {
-    cancelAnimationFrame(matrixAnimId);
-    matrixAnimId = null;
-  }
-  matrixCtx.clearRect(0, 0, 800, 600);
-}
-
-// ─── CRTC 6845 RASTER EFFECTS ───
-let screenShake = { x: 0, y: 0, intensity: 0 };
-let rasterTear = { active: false, offset: 0, timer: 0 };
-let syncJitter = 0;
-
-function triggerScreenShake(intensity) {
-  screenShake.intensity = Math.max(screenShake.intensity, intensity);
-}
-
-function triggerRasterTear() {
-  rasterTear.active = true;
-  rasterTear.offset = Math.floor(Math.random() * 200) - 100;
-  rasterTear.timer = 20;
-}
-
-function updateRasterEffects() {
-  // Screen shake decay
-  if (screenShake.intensity > 0) {
-    screenShake.x = (Math.random() - 0.5) * screenShake.intensity * 6;
-    screenShake.y = (Math.random() - 0.5) * screenShake.intensity * 4;
-    screenShake.intensity *= 0.85;
-    if (screenShake.intensity < 0.3) {
-      screenShake.intensity = 0;
-      screenShake.x = 0;
-      screenShake.y = 0;
-    }
-  }
-
-  // Raster tear decay
-  if (rasterTear.active) {
-    rasterTear.timer--;
-    if (rasterTear.timer <= 0) {
-      rasterTear.active = false;
-      rasterTear.offset = 0;
-    }
-  }
-
-  // Subtle sync jitter
-  syncJitter = (Math.random() - 0.5) * 0.6;
-}
-
-// ─── PLAYER ───
-function createPlayer() {
-  return {
-    x: W/2, y: H - 80,
-    w: 24, h: 24,
-    speed: 4,
-    fireRate: 8,
-    fireTimer: 0,
-    power: 1,
-    invincible: 0,
-  };
-}
-
-// ─── BULLETS ───
-function createBullet(x, y, isEnemy = false, speed = 5) {
-  return {
-    x, y, w: 4, h: 10,
-    speed: isEnemy ? speed : -speed,
-    isEnemy,
-    active: true,
-  };
-}
-
-// ─── ENEMIES ───
-const enemyTypes = [
-  { glyph: Glyphs.enemy1, hp: 1, speed: 0.8, score: 100, shootRate: 120, w: 18, h: 18 },
-  { glyph: Glyphs.enemy2, hp: 2, speed: 1.0, score: 200, shootRate: 90, w: 18, h: 18 },
-  { glyph: Glyphs.enemy3, hp: 3, speed: 0.6, score: 300, shootRate: 150, w: 20, h: 18 },
+const bootLines = [
+  { t: '', d: 200 },
+  { t: 'IBM 5153 BIOS v1.11 01/10/84', d: 300 },
+  { t: 'Copyright 1984 IBM Corp.', d: 200 },
+  { t: '', d: 150 },
+  { t: '  CPU: Intel 8088 @ 4.77 MHz', d: 150 },
+  { t: '  Coprocessor: None', d: 100 },
+  { t: '', d: 100 },
+  { t: 'Memory Test:     ', d: 80, mem: true },
+  { t: '', d: 150 },
+  { t: '  IBM SHMUP v1.0 detected', d: 400 },
+  { t: '', d: 100 },
+  { t: '  2 Floppy drive(s) detected', d: 300 },
+  { t: '', d: 150 },
+  { t: '  Starting MS-DOS...', d: 600 },
+  { t: '', d: 200 },
 ];
 
-function createEnemy(x, y, type, pattern) {
-  return {
-    x, y, type,
-    hp: type.hp, maxHp: type.hp,
-    glyph: type.glyph, w: type.w, h: type.h,
-    speed: type.speed, score: type.score,
-    shootRate: type.shootRate, shootTimer: Math.random() * type.shootRate,
-    pattern: pattern || 'down',
-    active: true,
-    originX: x,
-    timer: 0,
-    moveDir: 1,
-  };
-}
+function runBoot() {
+  let li = 0, ci = 0, mem = 0, bt = '';
+  bootDone = false;
 
-// ─── POWERUPS ───
-function createPowerup(x, y, type = 'power') {
-  return { x, y, w: 30, h: 18, type, speed: 1.5, active: true };
-}
-
-// ─── PARTICLES ───
-function createParticle(x, y, color = '#0f0', count = 8) {
-  const p = [];
-  for (let i = 0; i < count; i++) {
-    const angle = (Math.PI * 2 / count) * i;
-    p.push({
-      x, y,
-      vx: Math.cos(angle) * (1 + Math.random() * 2),
-      vy: Math.sin(angle) * (1 + Math.random() * 2),
-      life: 20 + Math.random() * 15,
-      maxLife: 35,
-      color,
-      size: 2 + Math.random() * 4,
-    });
-  }
-  return p;
-}
-
-// ─── INIT / RESET ───
-function resetGame() {
-  score = 0;
-  lives = 3;
-  level = 1;
-  wave = 0;
-  frame = 0;
-  comboCounter = 0;
-  comboTimer = 0;
-  player = createPlayer();
-  bullets = [];
-  enemies = [];
-  enemyBullets = [];
-  powerups = [];
-  particles = [];
-  spawnTimer = 0;
-  waveTimer = 60;
-  updateUI();
-}
-
-function startGame() {
-  if (bootRunning) return;
-  if (!bootSequenceCompleted) {
-    runBootSequence();
-    bootSequenceCompleted = true;
-    return;
-  }
-  resetGame();
-  gameState = 'playing';
-  titleScreen.style.display = 'none';
-  gameOverScreen.style.display = 'none';
-  stopMatrixRain();
-  if (audioCtx.state === 'suspended') audioCtx.resume();
-}
-
-// ─── SPAWNING ───
-function spawnWave() {
-  wave++;
-  // Play floppy drive seek sound on new wave
-  sfxFloppySeek();
-  const cols = 7;
-  const rows = Math.min(2 + Math.floor(wave / 2), 5);
-  const spacingX = 80;
-  const spacingY = 60;
-  const startX = (W - (cols - 1) * spacingX) / 2;
-  const startY = 40;
-
-  // Pick enemy type based on wave
-  const typeIdx = Math.min(Math.floor(wave / 2), enemyTypes.length - 1);
-  const eType = enemyTypes[typeIdx];
-
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      // Random missing enemies for variety
-      if (Math.random() < 0.1) continue;
-      const ex = startX + c * spacingX;
-      const ey = startY + r * spacingY;
-
-      // Variation: mix in some weaker enemies
-      const actualType = r < 2 && wave > 2
-        ? enemyTypes[Math.min(typeIdx + 1, enemyTypes.length - 1)]
-        : enemyTypes[Math.max(typeIdx - 1, 0)];
-
-      enemies.push(createEnemy(ex, ey, actualType, 'wave'));
+  function next() {
+    if (li >= bootLines.length) {
+      bt += '\n$ INSERT COIN';
+      bootTextEl.textContent = bt;
+      bootDone = true;
+      return;
     }
-  }
-}
-
-function spawnPowerup(x, y) {
-  if (Math.random() < 0.12) {
-    const types = ['power'];
-    powerups.push(createPowerup(x, y, types[Math.floor(Math.random() * types.length)]));
-  }
-}
-
-// ─── PLAYER FIRE ───
-function playerFire() {
-  sfxShoot();
-  const pw = player.power;
-  if (pw >= 1) bullets.push(createBullet(player.x, player.y - 12));
-  if (pw >= 2) {
-    bullets.push(createBullet(player.x - 8, player.y - 6));
-    bullets.push(createBullet(player.x + 8, player.y - 6));
-  }
-  if (pw >= 3) {
-    bullets[bullets.length - 3].vx = -0.5;
-    bullets[bullets.length - 2].vx = 0.5;
-  }
-  player.fireTimer = player.fireRate - player.power;
-}
-
-// ─── UPDATE ───
-function update() {
-  if (gameState !== 'playing') return;
-  frame++;
-
-  // Player movement
-  if (keys['ArrowLeft'] || keys['KeyA'] || keys['KeyQ']) player.x -= player.speed;
-  if (keys['ArrowRight'] || keys['KeyD']) player.x += player.speed;
-  if (keys['ArrowUp'] || keys['KeyZ'] || keys['KeyW']) player.y -= player.speed;
-  if (keys['ArrowDown'] || keys['KeyS']) player.y += player.speed;
-  player.x = Math.max(20, Math.min(W - 20, player.x));
-  player.y = Math.max(20, Math.min(H - 20, player.y));
-
-  // Fire
-  if (player.fireTimer > 0) player.fireTimer--;
-  if ((keys['Space'] || keys['KeyZ']) && player.fireTimer <= 0) {
-    playerFire();
-  }
-
-  // Invincibility
-  if (player.invincible > 0) player.invincible--;
-
-  // Combo timer
-  if (comboTimer > 0) comboTimer--;
-  else comboCounter = 0;
-
-  // Spawn enemies
-  waveTimer--;
-  if (waveTimer <= 0 && enemies.length === 0) {
-    spawnWave();
-    waveTimer = 120 + wave * 20;
-    level++;
-    // Speed up enemies as levels progress
-    enemies.forEach(e => e.speed += 0.05 * wave);
-  }
-
-  // Update bullets
-  for (const b of bullets) {
-    b.y += b.speed;
-    if (b.vx) b.x += b.vx;
-    if (b.y < -20 || b.y > H + 20) b.active = false;
-  }
-  bullets = bullets.filter(b => b.active);
-
-  // Update enemy bullets
-  for (const b of enemyBullets) {
-    b.y += b.speed;
-    if (b.y > H + 20) b.active = false;
-  }
-  enemyBullets = enemyBullets.filter(b => b.active);
-
-  // Update enemies
-  for (const e of enemies) {
-    e.timer++;
-
-    // Movement patterns
-    if (e.pattern === 'wave') {
-      e.x = e.originX + Math.sin(e.timer * 0.02 + e.y * 0.01) * 30;
-      e.y += e.speed * 0.3;
-    } else {
-      e.y += e.speed;
-    }
-
-    // Shooting
-    e.shootTimer--;
-    if (e.shootTimer <= 0 && e.y > 20 && e.y < H * 0.6) {
-      enemyBullets.push(createBullet(e.x, e.y + 10, true, 1.5 + Math.random()));
-      e.shootTimer = e.shootRate - wave * 2;
-      if (e.shootTimer < 40) e.shootTimer = 40;
-    }
-
-    // Off screen
-    if (e.y > H + 30) e.active = false;
-  }
-
-  // Update powerups
-  for (const p of powerups) {
-    p.y += p.speed;
-    if (p.y > H + 20) p.active = false;
-  }
-  powerups = powerups.filter(p => p.active);
-
-  // ─── COLLISIONS ───
-
-  // Bullets vs enemies
-  for (const b of bullets) {
-    if (!b.active) continue;
-    for (const e of enemies) {
-      if (!e.active) continue;
-      if (Math.abs(b.x - e.x) < e.w/2 + 4 && Math.abs(b.y - e.y) < e.h/2 + 4) {
-        b.active = false;
-        e.hp--;
-        if (e.hp <= 0) {
-          e.active = false;
-          const pts = e.score * (1 + comboCounter * 0.1);
-          score += Math.floor(pts);
-          comboCounter++;
-          comboTimer = 120;
-          particles.push(...createParticle(e.x, e.y, '#0f0', 12));
-          particles.push(...createParticle(e.x, e.y, '#ff0', 6));
-          sfxExplode();
-          // Screen shake on enemy death - bigger for tougher enemies
-          if (e.maxHp >= 2) {
-            triggerScreenShake(2 + e.maxHp);
-          } else {
-            triggerScreenShake(0.5);
-          }
-          spawnPowerup(e.x, e.y);
-        } else {
-          sfxHit();
-          particles.push(...createParticle(e.x, e.y, '#0f0', 4));
+    const line = bootLines[li];
+    if (line.mem) {
+      mem = 0;
+      let ml = '';
+      function memTick() {
+        mem += Math.floor(8 + Math.random() * 24);
+        if (mem >= 640) {
+          mem = 640;
+          bt += line.t + '0640 KB OK\n';
+          bootTextEl.textContent = bt + '█';
+          li++;
+          setTimeout(next, 200);
+          return;
         }
-        updateUI();
-        break;
+        ml = line.t + String(mem).padStart(4, ' ') + ' KB';
+        const a = bt.split('\n');
+        if (a.length > 0 && a[a.length-1].startsWith(line.t.trim())) a[a.length-1] = ml;
+        else a.push(ml);
+        bt = a.join('\n');
+        bootTextEl.textContent = bt + '█';
+        setTimeout(memTick, 30);
       }
+      memTick();
+      return;
+    }
+    if (ci < line.t.length) {
+      bt += line.t[ci];
+      ci++;
+      bootTextEl.textContent = bt + '█';
+      setTimeout(next, 20 + Math.random() * 20);
+    } else {
+      bt += '\n';
+      ci = 0;
+      li++;
+      bootTextEl.textContent = bt + '█';
+      setTimeout(next, line.d);
     }
   }
-
-  // Enemy bullets vs player
-  if (player.invincible <= 0) {
-    for (const b of enemyBullets) {
-      if (!b.active) continue;
-      if (Math.abs(b.x - player.x) < 14 && Math.abs(b.y - player.y) < 14) {
-        b.active = false;
-        hitPlayer();
-        break;
-      }
-    }
-
-    // Enemies vs player
-    for (const e of enemies) {
-      if (!e.active) continue;
-      if (Math.abs(e.x - player.x) < e.w/2 + 10 && Math.abs(e.y - player.y) < e.h/2 + 10) {
-        e.active = false;
-        particles.push(...createParticle(e.x, e.y, '#f00', 16));
-        sfxExplode();
-        hitPlayer();
-        break;
-      }
-    }
-  }
-
-  // Powerups vs player
-  for (const p of powerups) {
-    if (!p.active) continue;
-    if (Math.abs(p.x - player.x) < 24 && Math.abs(p.y - player.y) < 24) {
-      p.active = false;
-      if (p.type === 'power' && player.power < 4) player.power++;
-      sfxPowerup();
-    }
-  }
-  powerups = powerups.filter(p => p.active);
-
-  // Update particles
-  for (const p of particles) {
-    p.x += p.vx;
-    p.y += p.vy;
-    p.life--;
-  }
-  particles = particles.filter(p => p.life > 0);
-
-  // Remove dead enemies
-  enemies = enemies.filter(e => e.active);
-
-  // Update UI
-  updateUI();
+  bt = '';
+  bootTextEl.textContent = '█';
+  setTimeout(next, 100);
 }
 
-function hitPlayer() {
-  lives--;
-  player.invincible = 120;
-  player.power = Math.max(1, player.power - 1);
-  particles.push(...createParticle(player.x, player.y, '#f00', 20));
-  sfxGameOver();
-  // Raster tear effect on player hit
-  triggerRasterTear();
+// Draw boot screen to canvas (for Three.js)
+function drawToCanvas() {
+  ctx.fillStyle = '#020a02';
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#33ff33';
+  ctx.shadowBlur = 8;
+  ctx.shadowColor = '#33ff33';
+  ctx.font = '12px "Courier New", monospace';
 
-  if (lives <= 0) {
-    gameOver();
-  }
-}
-
-function gameOver() {
-  gameState = 'gameover';
-  if (score > hiScore) {
-    hiScore = score;
-    localStorage.setItem('ibmShmupHiScore', hiScore);
-  }
-  finalScoreSpan.textContent = score;
-  gameOverScreen.style.display = 'flex';
-  updateUI();
-}
-
-function updateUI() {
-  scoreSpan.textContent = String(score).padStart(5, '0');
-  hiScoreSpan.textContent = String(hiScore).padStart(5, '0');
-}
-
-// ─── DRAWING ───
-function drawText(x, y, lines, color = '#0f0') {
-  ctx.font = '14px "Courier New", monospace';
-  ctx.textAlign = 'center';
-  ctx.fillStyle = color;
-  lines.forEach((line, i) => {
-    ctx.fillText(line, x, y + i * 28);
+  const lines = (bootTextEl.textContent || '').split('\n');
+  lines.forEach((l, i) => {
+    ctx.fillText(l.replace('█', '_'), 20, 30 + i * 18);
   });
 }
 
-function draw() {
-  ctx.save();
+// ─── Three.js ───
+const container = document.getElementById('game-container');
+const scene = new THREE.Scene();
+const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+const renderer = new THREE.WebGLRenderer({ antialias: false });
+renderer.setSize(800, 600);
+renderer.domElement.id = 'three-canvas';
+container.appendChild(renderer.domElement);
 
-  // ─── CRTC 6845 RASTER EFFECTS ───
-  updateRasterEffects();
+const texture = new THREE.CanvasTexture(canvas);
+texture.minFilter = THREE.LinearFilter;
 
-  // Screen shake
-  if (screenShake.intensity > 0) {
-    ctx.translate(screenShake.x, screenShake.y);
-  }
+const uniforms = {
+  tDiffuse: { value: texture },
+  uTime: { value: 0 }
+};
 
-  // Subtle horizontal sync jitter
-  ctx.translate(syncJitter, 0);
+const material = new THREE.ShaderMaterial({
+  vertexShader: `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform sampler2D tDiffuse;
+    uniform float uTime;
+    varying vec2 vUv;
 
-  ctx.fillStyle = '#000';
-  ctx.fillRect(0, 0, W, H);
-
-  // ─── GRID (subtle phosphor) ───
-  ctx.strokeStyle = 'rgba(0,255,0,0.03)';
-  ctx.lineWidth = 1;
-  for (let x = 0; x < W; x += 40) {
-    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke();
-  }
-  for (let y = 0; y < H; y += 40) {
-    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
-  }
-
-  if (gameState === 'playing' || gameState === 'paused' || gameState === 'gameover') {
-    // Draw player
-    if (gameState !== 'gameover' && player.invincible % 6 < 3) {
-      const pg = Glyphs.player;
-      ctx.fillStyle = '#0f0';
-      drawText(player.x, player.y - 14, [pg[0], pg[1], pg[2], pg[3]]);
+    vec2 curve(vec2 uv) {
+      uv = (uv - 0.5) * 2.0;
+      uv.x *= 1.0 + pow(abs(uv.y) / 4.0, 2.0);
+      uv.y *= 1.0 + pow(abs(uv.x) / 3.0, 2.0);
+      uv = uv / 2.0 + 0.5;
+      uv = uv * 0.92 + 0.04;
+      return uv;
     }
 
-    // Draw bullets
-    ctx.fillStyle = '#0f0';
-    for (const b of bullets) {
-      ctx.fillRect(b.x - 1, b.y - 5, 3, 10);
-    }
-
-    // Draw enemy bullets
-    ctx.fillStyle = '#ff0';
-    for (const b of enemyBullets) {
-      ctx.fillRect(b.x - 2, b.y - 2, 4, 4);
-      ctx.fillStyle = '#0f0';
-    }
-
-    // Draw enemies
-    for (const e of enemies) {
-      const lines = e.glyph;
-      // Flash when hit
-      const color = e.hp < e.maxHp && frame % 4 < 2 ? '#ff0' : '#0f0';
-      drawText(e.x, e.y - (lines.length/2) * 14, lines, color);
-
-      // HP bar for tough enemies
-      if (e.maxHp > 1) {
-        ctx.fillStyle = '#0a0';
-        ctx.fillRect(e.x - 10, e.y - 16, 20, 3);
-        ctx.fillStyle = '#0f0';
-        ctx.fillRect(e.x - 10, e.y - 16, 20 * (e.hp / e.maxHp), 3);
+    void main() {
+      vec2 uv = curve(vUv);
+      if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
+        gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+        return;
       }
+      float r = texture2D(tDiffuse, uv + vec2(0.0015, 0.0)).r;
+      float g = texture2D(tDiffuse, uv).g;
+      float b = texture2D(tDiffuse, uv - vec2(0.0015, 0.0)).b;
+      vec3 col = vec3(r, g, b);
+      col -= sin(uv.y * 800.0) * 0.12;
+      col *= 1.0 + 0.01 * sin(uTime * 20.0);
+      float v = uv.x * uv.y * (1.0 - uv.x) * (1.0 - uv.y);
+      col *= clamp(pow(16.0 * v, 0.4), 0.0, 1.0);
+      gl_FragColor = vec4(col, 1.0);
     }
-
-    // Draw powerups
-    for (const p of powerups) {
-      const lines = Glyphs.powerup;
-      ctx.fillStyle = '#0ff';
-      drawText(p.x, p.y, lines, '#0ff');
-    }
-
-    // Draw particles
-    for (const p of particles) {
-      const alpha = p.life / p.maxLife;
-      ctx.globalAlpha = alpha;
-      ctx.fillStyle = p.color;
-      // ASCII-like particle shapes
-      const chars = ['*', '+', '.', '°'];
-      ctx.font = '12px monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText(chars[Math.floor(Math.random() * chars.length)], p.x, p.y);
-    }
-    ctx.globalAlpha = 1;
-
-    // Lives indicator
-    ctx.fillStyle = '#0f0';
-    ctx.font = '14px monospace';
-    ctx.textAlign = 'left';
-    let livesStr = '';
-    for (let i = 0; i < lives; i++) livesStr += '▲ ';
-    ctx.fillText(livesStr, 16, H - 16);
-
-    // Power level
-    ctx.textAlign = 'right';
-    ctx.fillText('PWR:' + player.power, W - 16, H - 16);
-
-    // Level / Wave
-    ctx.textAlign = 'center';
-    ctx.font = '12px monospace';
-    ctx.fillStyle = 'rgba(0,255,0,0.4)';
-    ctx.fillText('WAVE ' + wave, W/2, H - 16);
-
-    // Combo
-    if (comboCounter > 1) {
-      ctx.fillStyle = '#ff0';
-      ctx.textAlign = 'center';
-      ctx.font = '16px monospace';
-      ctx.fillText('×' + comboCounter, W/2, 30);
-    }
-
-    // Pause indicator
-    if (gameState === 'paused') {
-      ctx.fillStyle = 'rgba(0,0,0,0.5)';
-      ctx.fillRect(0, 0, W, H);
-      ctx.fillStyle = '#0f0';
-      ctx.font = '24px monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText('PAUSED', W/2, H/2);
-      ctx.font = '14px monospace';
-      ctx.fillText('PRESS P TO CONTINUE', W/2, H/2 + 30);
-    }
-  }
-
-  // ─── RASTER TEAR (CRTC 6845 scanline offset) ───
-  if (rasterTear.active) {
-    ctx.save();
-    // Create a tearing effect by drawing a shifted copy of the top portion
-    const tearY = 200 + Math.sin(frame * 0.3) * 60;
-    const tearH = 40;
-    ctx.beginPath();
-    ctx.rect(0, tearY, W, tearH);
-    ctx.clip();
-    ctx.translate(rasterTear.offset * 0.5, 0);
-    // Redraw a shifted copy of the torn area
-    ctx.fillStyle = 'rgba(0,255,0,0.03)';
-    ctx.fillRect(0, tearY, W, tearH);
-    // Horizontal displacement lines
-    ctx.strokeStyle = 'rgba(0,255,0,0.15)';
-    ctx.lineWidth = 1;
-    for (let scanY = 0; scanY < tearH; scanY += 4) {
-      const scanShift = Math.sin(scanY * 0.5 + frame * 0.2) * 3;
-      ctx.beginPath();
-      ctx.moveTo(0, tearY + scanY);
-      ctx.lineTo(W, tearY + scanY);
-      ctx.stroke();
-    }
-    ctx.restore();
-  }
-
-  // Phosphor glow effect
-  ctx.fillStyle = 'rgba(0,255,0,0.015)';
-  ctx.fillRect(0, 0, W, H);
-
-  ctx.restore();
-}
-
-// ─── GAME LOOP ───
-function gameLoop() {
-  update();
-  draw();
-  requestAnimationFrame(gameLoop);
-}
-
-// ─── KEYBOARD ───
-document.addEventListener('keydown', (e) => {
-  keys[e.code] = true;
-
-  if (e.code === 'KeyP' && gameState === 'playing') {
-    gameState = 'paused';
-  } else if (e.code === 'KeyP' && gameState === 'paused') {
-    gameState = 'playing';
-  }
-
-  // Also handle Space/Enter during boot to skip quickly, or during title
-  if (gameState === 'title' && (e.code === 'Space' || e.code === 'Enter')) {
-    if (bootRunning) {
-      // Skip boot — handled via a flag
-    }
-    startGame();
-  }
-
-  if (gameState === 'gameover' && (e.code === 'Space' || e.code === 'Enter')) {
-    startGame();
-  }
-
-  // Prevent scrolling
-  if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
-    e.preventDefault();
-  }
+  `,
+  uniforms
 });
 
-document.addEventListener('keyup', (e) => {
-  keys[e.code] = false;
-});
+const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material);
+scene.add(mesh);
 
-// ─── START ───
-hiScoreSpan.textContent = String(hiScore).padStart(5, '0');
-// Start with boot sequence
-titleScreen.style.display = 'none';
-bootScreen.style.display = 'flex';
-runBootSequence();
+function animate() {
+  uniforms.uTime.value = performance.now() / 1000.0;
+  drawToCanvas();
+  texture.needsUpdate = true;
+  renderer.render(scene, camera);
+  requestAnimationFrame(animate);
+}
 
-// ─── THREE.JS CRT SHADER — barrel distortion + scanlines + chromatic aberration + vignette ───
-(function() {
-  try {
-    // Configuration
-    const GAME_W = 640, GAME_H = 480;
-    const DISPLAY_W = 800, DISPLAY_H = 600;
-
-    // Three.js setup
-    const renderer = new THREE.WebGLRenderer({
-      antialias: false,
-      preserveDrawingBuffer: false,
-    });
-    renderer.setSize(DISPLAY_W, DISPLAY_H);
-    renderer.setPixelRatio(1); // Keep pixelated look
-    renderer.domElement.style.cssText = 'position:absolute;top:0;left:0;width:800px;height:600px;z-index:15;pointer-events:none;image-rendering:pixelated;';
-    document.getElementById('game-container').appendChild(renderer.domElement);
-
-    const scene = new THREE.Scene();
-    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-
-    // CanvasTexture from the game canvas — the game draws to this via ctx
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.minFilter = THREE.LinearFilter;
-    texture.magFilter = THREE.LinearFilter;
-    texture.wrapS = THREE.ClampToEdgeWrapping;
-    texture.wrapT = THREE.ClampToEdgeWrapping;
-
-    // ─── CRT Shader Material ───
-    const crtMaterial = new THREE.ShaderMaterial({
-      uniforms: {
-        uTexture: { value: texture },
-        uTime: { value: 0 },
-        uResolution: { value: new THREE.Vector2(DISPLAY_W, DISPLAY_H) },
-      },
-      vertexShader: `
-        varying vec2 vUv;
-        void main() {
-          vUv = uv;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: `
-        precision highp float;
-        varying vec2 vUv;
-        uniform sampler2D uTexture;
-        uniform float uTime;
-        uniform vec2 uResolution;
-
-        // Barrel distortion function — centers uv, applies distortion, re-maps
-        vec2 curve(vec2 uv) {
-          uv = uv * 2.0 - 1.0;
-          uv.x *= 1.0 + pow(abs(uv.y) / 4.0, 2.0);
-          uv.y *= 1.0 + pow(abs(uv.x) / 3.0, 2.0);
-          uv = uv * 0.92 + 0.04;
-          return uv;
-        }
-
-        void main() {
-          vec2 uv = curve(vUv);
-
-          // Black outside the bezel (monitor area bounds)
-          if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
-            gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
-            return;
-          }
-
-          // Chromatic aberration — shift R and B channels slightly
-          float rOffset = 0.0015;
-          float bOffset = -0.0015;
-          float r = texture2D(uTexture, uv + vec2(rOffset, 0.0)).r;
-          float g = texture2D(uTexture, uv).g;
-          float b = texture2D(uTexture, uv + vec2(bOffset, 0.0)).b;
-          vec3 color = vec3(r, g, b);
-
-          // Scanlines
-          float scanline = sin(uv.y * 800.0) * 0.12;
-          color -= scanline;
-
-          // Flicker
-          color *= 1.0 + 0.01 * sin(uTime * 20.0);
-
-          // Vignette
-          float vignette = pow(16.0 * uv.x * uv.y * (1.0 - uv.x) * (1.0 - uv.y), 0.4);
-          color *= vignette;
-
-          gl_FragColor = vec4(color, 1.0);
-        }
-      `
-    });
-
-    const geometry = new THREE.PlaneGeometry(2, 2);
-    const mesh = new THREE.Mesh(geometry, crtMaterial);
-    scene.add(mesh);
-
-    // Override gameLoop to render through Three.js
-    gameLoop = function() {
-      update();
-      draw();
-
-      // Update texture from game canvas
-      texture.needsUpdate = true;
-
-      // Update uniforms
-      crtMaterial.uniforms.uTime.value = performance.now() / 1000.0;
-
-      // Render Three.js scene
-      renderer.render(scene, camera);
-
-      requestAnimationFrame(gameLoop);
-    };
-
-  } catch(e) {
-    console.warn('Three.js CRT effect failed:', e);
-  }
-})();
-
-gameLoop();
+runBoot();
+animate();
 </script>
-</div>
 </body>
 </html>
