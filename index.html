@@ -112,8 +112,12 @@ canvas {
 #boot-text {
   font-size: 14px;
   line-height: 1.5;
-  white-space: pre;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: break-all;
   text-align: left;
+  max-width: 100%;
+  padding: 20px;
 }
 #boot-cursor {
   display: inline-block;
@@ -373,7 +377,15 @@ function runBootSequence() {
           setTimeout(typeNextChar, 300);
           return;
         }
-        bootText += '\r' + currentLine + String(memCount).padStart(4, ' ') + ' KB';
+        // Memory test — replace last line instead of appending
+        const memLine = currentLine + String(memCount).padStart(4, ' ') + ' KB';
+        const linesArr = bootText.split('\n');
+        if (linesArr.length > 0 && linesArr[linesArr.length-1].startsWith(currentLine.trim())) {
+          linesArr[linesArr.length-1] = memLine;
+        } else {
+          linesArr.push(memLine);
+        }
+        bootText = linesArr.join('\n');
         bootTextEl.textContent = bootText + '█';
       }, 40);
       return;
