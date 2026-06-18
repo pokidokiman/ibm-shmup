@@ -198,7 +198,7 @@ function up(){
   if(keys['ArrowRight']||keys['KeyD'])pl.x+=pl.speed;
   if(keys['ArrowUp']||keys['KeyW']||keys['KeyZ'])pl.y-=pl.speed;
   if(keys['ArrowDown']||keys['KeyS'])pl.y+=pl.speed;
-  pl.x=Math.max(20,Math.min(W-20,pl.x));pl.y=Math.max(20,Math.min(H-20,pl.y));
+  pl.x=Math.max(40,Math.min(W-40,pl.x));pl.y=Math.max(20,Math.min(H-20,pl.y));
   if(pl.ft>0)pl.ft--;
   if((keys['Space']||keys['KeyZ'])&&pl.ft<=0){
     if(pl.pw>=1)buls.push(mkBul(pl.x,pl.y-12));
@@ -447,8 +447,8 @@ function render(){
   ctx.clearRect(0,0,W,H);
   ctx.fillStyle=BG;ctx.fillRect(0,0,W,H);
   
-  // CRT safe zone: barrel distortion trekt randen naar binnen, clip alles buiten 80px marge
-  ctx.beginPath();ctx.rect(80,0,W-160,H);ctx.clip();
+  // CRT safe zone: barrel distortion trekt randen naar binnen, clip alles buiten 40px marge
+  ctx.beginPath();ctx.rect(40,0,W-80,H);ctx.clip();
 
   const blink=Math.floor(performance.now()/500)%2===0;
   const LH=22;
@@ -529,12 +529,12 @@ function render(){
 
     ctx.font=`14px ${MONO}`;ctx.fillStyle=FG;glow(FG,5);
     ctx.textAlign='left';ctx.textBaseline='top';
-    ctx.fillText('SCORE '+String(score).padStart(5,'0'),10,8);
+    ctx.fillText('SCORE '+String(score).padStart(5,'0'),40,8);
     ctx.fillText('HI '+String(hs).padStart(5,'0'),W-180,8);
     ctx.textAlign='left';ctx.textBaseline='bottom';
     let ls='';for(let i=0;i<lives;i++)ls+='▲ ';
-    ctx.fillText(ls,10,H-8);
-    ctx.textAlign='right';ctx.fillText('PWR:'+pl.pw,W-10,H-8);
+    ctx.fillText(ls,40,H-8);
+    ctx.textAlign='right';ctx.fillText('PWR:'+pl.pw,W-40,H-8);
     ctx.textAlign='center';ctx.fillStyle='rgba(51,255,51,0.4)';
     ctx.fillText('WAVE '+wave,W/2,H-8);
     if(cc>1){ctx.fillStyle='#ffdd00';ctx.font=`18px ${MONO}`;glow('#ff0',10);ctx.textBaseline='top';ctx.fillText('×'+cc,W/2,32)}
