@@ -24,7 +24,7 @@ body{background:#010401;display:flex;justify-content:center;align-items:center;m
   width:820px;height:615px;
   margin-left:-410px;
   display:block;
-  filter:url(#crt-barrel);
+  /* CRT barrel uit — gaf dubbel beeld/artifacts aan randen */
   border-radius:10px;
 }
 
@@ -67,31 +67,9 @@ body{background:#010401;display:flex;justify-content:center;align-items:center;m
   <div id="glass"></div>
 </div>
 
-<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
-  <defs>
-    <filter id="crt-barrel" filterUnits="objectBoundingBox" x="-15%" y="-15%" width="130%" height="130%">
-      <feImage id="sphereMap" result="map" href=""/>
-      <feDisplacementMap in="SourceGraphic" in2="map" scale="60" xChannelSelector="R" yChannelSelector="G"/>
-    </filter>
-  </defs>
-</svg>
+<!-- SVG filter uit — CRT barrel verwijderd -->
 
 <script>
-(function(){
-  const S=256,k=0.38;
-  const c=document.createElement('canvas');c.width=S;c.height=S;
-  const cx=c.getContext('2d'),id=cx.createImageData(S,S),d=id.data;
-  for(let y=0;y<S;y++)for(let x=0;x<S;x++){
-    const nx=(x/S)*2-1,ny=(y/S)*2-1,r2=nx*nx+ny*ny;
-    const i=(y*S+x)*4;
-    d[i  ]=Math.max(0,Math.min(255,Math.round((nx*k*r2+1)*127.5)));
-    d[i+1]=Math.max(0,Math.min(255,Math.round((ny*k*r2+1)*127.5)));
-    d[i+2]=128;d[i+3]=255;
-  }
-  cx.putImageData(id,0,0);
-  document.getElementById('sphereMap').setAttribute('href',c.toDataURL());
-})();
-
 const canvas=document.getElementById('game-canvas');
 const ctx=canvas.getContext('2d');
 const W=1024,H=768;
