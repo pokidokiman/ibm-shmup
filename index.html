@@ -83,6 +83,8 @@ canvas {
 }
 #title-screen .sub {
   font-size: 18px; opacity: 0.7; margin-bottom: 40px;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0;
 }
 #title-screen .blink {
   font-size: 22px;
@@ -167,7 +169,7 @@ body::after {
     <canvas id="matrix-canvas" width="800" height="600" style="position:absolute;top:0;left:0;z-index:1;pointer-events:none;background:transparent;"></canvas>
     <div style="position:relative;z-index:2;display:flex;flex-direction:column;justify-content:center;align-items:center;height:100%;">
       <h1>SHMUP</h1>
-      <div class="sub">┌────────────┐<br>│ IBM 5153 │<br>└────────────┘</div>
+      <div class="sub" style="letter-spacing:0;font-family:'Courier New',monospace;">+──────────────+<br>│  IBM 5153   │<br>+──────────────+</div>
       <div class="blink">□ INSERT COIN □</div>
       <div style="margin-top:40px; font-size:14px; opacity:0.5;">
         ARROWS/ZQSD ─ MOVE &nbsp;│&nbsp; SPACE/Z ─ FIRE<br>
@@ -325,7 +327,7 @@ function runBootSequence() {
     { text: '  CPU: Intel 8088 @ 4.77 MHz', delay: 200 },
     { text: '  Coprocessor: None', delay: 150 },
     { text: '', delay: 150 },
-    { text: 'Memory Test: ', delay: 100, isMemTest: true },
+    { text: 'Memory Test:     ', delay: 100, isMemTest: true },
     { text: '', delay: 200 },
     { text: '  IBM SHMUP v1.0 detected', delay: 500 },
     { text: '', delay: 150 },
