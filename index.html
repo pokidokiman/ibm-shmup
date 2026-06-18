@@ -213,6 +213,8 @@ function up(){
   
   // ─── WAVE & SPAWN LOGIC ───
   if(wt>0)wt--;
+  // Als boss dood is en wt==0, bossDead clearen zodat wave kan doorstromen  
+  if(wt<=0&&!boss&&bossDead)bossDead=false;
   
   // Check for boss wave (every 5 waves, after enemies are gone)
   if(wave>0&&wave%5===0&&!boss&&enems.length===0&&wt<=0&&!bossDead){
@@ -223,7 +225,7 @@ function up(){
   // Spawn enemies
   if(spawnTimer>0)spawnTimer--;
   
-  if(wt<=0&&!boss&&spawnTimer<=0&&(enems.length===0||wt<=-300)&&!bossDead){
+  if(wt<=0&&!boss&&spawnTimer<=0&&(enems.length===0||wt<=-300)){
     wave++;
     waveType=(wave%5===0)?4:wave%4;
     const isBossWave=wave%5===0;
@@ -299,7 +301,7 @@ function up(){
   pups=pups.filter(p=>p.act);
   for(const b of buls){if(!b.act)continue;for(const e of enems){if(!e.act)continue;if(Math.abs(b.x-e.x)<e.w/2+6&&Math.abs(b.y-e.y)<e.h/2+6){b.act=false;e.hp--;if(e.hp<=0){e.act=false;const pts=Math.floor(e.sc*(1+cc*0.1));score+=pts;cc++;ct=120;parts.push(...mkParts(e.x,e.y,'#0f0',12),...mkParts(e.x,e.y,'#ff0',6));sfxExplode();if(Math.random()<0.12)pups.push(mkPup(e.x,e.y))}else{parts.push(...mkParts(e.x,e.y,'#0f0',4));sfxHit()}break}}}
   // Boss collision
-  if(boss){for(const b of buls){if(!b.act)continue;if(Math.abs(b.x-boss.x)<boss.w/2&&Math.abs(b.y-boss.y)<boss.h/2){b.act=false;boss.hp--;parts.push(...mkParts(b.x,b.y,'#ff0',6));sfxHit();if(boss.hp<=0){const pts=boss.sc;score+=pts;parts.push(...mkParts(boss.x,boss.y,'#0f0',30),...mkParts(boss.x,boss.y,'#ff0',20));sfxExplode();boss=null;wt=120;bossDead=true;wave++;}}}}
+  if(boss){for(const b of buls){if(!b.act)continue;if(Math.abs(b.x-boss.x)<boss.w/2&&Math.abs(b.y-boss.y)<boss.h/2){b.act=false;boss.hp--;parts.push(...mkParts(b.x,b.y,'#ff0',6));sfxHit();if(boss.hp<=0){const pts=boss.sc;score+=pts;parts.push(...mkParts(boss.x,boss.y,'#0f0',30),...mkParts(boss.x,boss.y,'#ff0',20));sfxExplode();boss=null;wt=120;bossDead=true;break;}}}}
   if(pl.inv<=0){
     for(const b of ebuls){if(!b.act)continue;if(Math.abs(b.x-pl.x)<16&&Math.abs(b.y-pl.y)<16){b.act=false;hit();break}}
     if(pl.inv<=0)for(const e of enems){if(!e.act)continue;if(Math.abs(e.x-pl.x)<e.w/2+12&&Math.abs(e.y-pl.y)<e.h/2+12){e.act=false;parts.push(...mkParts(e.x,e.y,'#f00',16));hit();break}}
