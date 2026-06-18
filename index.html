@@ -262,7 +262,7 @@ function up(){
     else{e.y+=e.sp}
     
     e.st--;if(e.st<=0&&e.y>20&&e.y<H*0.5){ebuls.push(mkBul(e.x,e.y+10,true,1.5+Math.random()));e.st=Math.max(60,e.sr-wave*3)}
-    if(e.y>H+30||e.x<-50||e.x>W+50)e.act=false
+    if(e.y>H+30||e.x<-100||e.x>W+100)e.act=false
   }
   
   // ─── BOSS BEHAVIOR ───
@@ -305,6 +305,7 @@ function up(){
   if(pl.inv<=0){
     for(const b of ebuls){if(!b.act)continue;if(Math.abs(b.x-pl.x)<16&&Math.abs(b.y-pl.y)<16){b.act=false;hit();break}}
     if(pl.inv<=0)for(const e of enems){if(!e.act)continue;if(Math.abs(e.x-pl.x)<e.w/2+12&&Math.abs(e.y-pl.y)<e.h/2+12){e.act=false;parts.push(...mkParts(e.x,e.y,'#f00',16));hit();break}}
+    if(pl.inv<=0&&boss&&Math.abs(boss.x-pl.x)<boss.w/2+12&&Math.abs(boss.y-pl.y)<boss.h/2+12){parts.push(...mkParts(boss.x,boss.y+20,'#f00',16));hit()}
   }
   for(const p of pups){if(!p.act)continue;if(Math.abs(p.x-pl.x)<28&&Math.abs(p.y-pl.y)<28){p.act=false;if(p.ty==='p'){if(pl.pw<4)pl.pw++;else score+=500;sfxPowerup()}}}
   pups=pups.filter(p=>p.act);
