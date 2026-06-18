@@ -185,7 +185,6 @@ body::after {
 <div id="crt-bezel">
 <div id="game-container">
   <canvas id="game" width="800" height="600"></canvas>
-  <canvas id="crt-overlay" width="800" height="600" style="position:absolute;top:0;left:0;width:800px;height:600px;pointer-events:none;z-index:50;"></canvas>
   <div id="ui-overlay">
     <div class="left">
       SCORE<br><span id="scoreDisplay">00000</span>
@@ -1059,6 +1058,49 @@ function draw() {
   ctx.fillStyle = 'rgba(0,255,0,0.015)';
   ctx.fillRect(0, 0, W, H);
 
+  // ─── CRT VIGNETTE + BEZEL ───
+  // Vignette: donkere hoeken
+  const vGrad = ctx.createRadialGradient(W/2, H/2, H*0.25, W/2, H/2, H*0.7);
+  vGrad.addColorStop(0, 'rgba(0,0,0,0)');
+  vGrad.addColorStop(0.55, 'rgba(0,0,0,0)');
+  vGrad.addColorStop(0.8, 'rgba(0,0,0,0.08)');
+  vGrad.addColorStop(0.95, 'rgba(0,0,0,0.18)');
+  vGrad.addColorStop(1, 'rgba(0,0,0,0.40)');
+  ctx.fillStyle = vGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  // CRT bezel — zwarte rand met gebogen hoeken (barrel distortion simulatie)
+  const bCurve = 40;
+  ctx.beginPath();
+  ctx.moveTo(W, 0);
+  ctx.lineTo(W, H);
+  ctx.lineTo(0, H);
+  ctx.lineTo(0, 0);
+  ctx.closePath();
+
+  // Bezel uitsparing met curves (bolle CRT look)
+  ctx.moveTo(bCurve, 0);
+  ctx.quadraticCurveTo(150, -10, W/2, -8);        // Boven
+  ctx.quadraticCurveTo(W-150, -10, W-bCurve, 0);
+  ctx.quadraticCurveTo(W+4, 150, W+2, H/2);        // Rechts
+  ctx.quadraticCurveTo(W+4, H-150, W-bCurve, H);
+  ctx.quadraticCurveTo(W-150, H+10, W/2, H+8);     // Onder
+  ctx.quadraticCurveTo(150, H+10, bCurve, H);
+  ctx.quadraticCurveTo(-4, H-150, -2, H/2);         // Links
+  ctx.quadraticCurveTo(-4, 150, bCurve, 0);
+
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.fill('evenodd');
+
+  // Extra: glow strook langs de randen voor CRT depth
+  ctx.strokeStyle = 'rgba(0,255,0,0.04)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(bCurve+2, 2);
+  ctx.quadraticCurveTo(150, -6, W/2, -4);
+  ctx.quadraticCurveTo(W-150, -6, W-bCurve-2, 2);
+  ctx.stroke();
+
   ctx.restore();
 }
 
@@ -1066,75 +1108,7 @@ function draw() {
 function gameLoop() {
   update();
   draw();
-  drawCrtOverlay();
   requestAnimationFrame(gameLoop);
-}
-
-// ─── CRT OVERLAY — barrel distortion + vignette ───
-const crtOverlay = document.getElementById('crt-overlay');
-const crtCtx = crtOverlay.getContext('2d');
-
-function drawCrtOverlay() {
-  const w = 800, h = 600;
-  crtCtx.clearRect(0, 0, w, h);
-
-  // 1. CRT curvature frame — teken een gebogen rand zodat het beeld convex lijkt
-  // Donkere hoek-uitsnede met bezel curves
-  const curve = 60; // curve radius
-  crtCtx.beginPath();
-  // Start bij rechterbovenhoek
-  crtCtx.moveTo(curve, 0);
-  // Bovenrand (bijna recht, lichte curve)
-  crtCtx.quadraticCurveTo(w/2, -8, w - curve, 0);
-  // Rechterbovenhoek
-  crtCtx.quadraticCurveTo(w + 2, h/2, w - curve, h);
-  // Onderrand (bijna recht, lichte curve)
-  crtCtx.quadraticCurveTo(w/2, h + 8, curve, h);
-  // Linkerbenedenhoek  
-  crtCtx.quadraticCurveTo(-2, h/2, curve, 0);
-  crtCtx.closePath();
-
-  // Buitenkant = zwart (CRT bezel), binnenkant = doorzichtig
-  crtCtx.fillStyle = '#000';
-
-  // Gebruik een clipping / compositing truc
-  crtCtx.save();
-  // Eerst het hele canvas vullen met zwart
-  crtCtx.fillRect(0, 0, w, h);
-  // Dan de curve-uitsparing eruit snijden
-  crtCtx.globalCompositeOperation = 'destination-out';
-  crtCtx.beginPath();
-  crtCtx.moveTo(curve, 0);
-  crtCtx.quadraticCurveTo(w/2, -6, w - curve, 0);
-  crtCtx.quadraticCurveTo(w + 1, h/2, w - curve, h);
-  crtCtx.quadraticCurveTo(w/2, h + 6, curve, h);
-  crtCtx.quadraticCurveTo(-1, h/2, curve, 0);
-  crtCtx.closePath();
-  crtCtx.fill();
-  crtCtx.restore();
-
-  // 2. Vignette — donkere hoeken over het zichtbare beeld
-  const grad = crtCtx.createRadialGradient(w/2, h/2, h*0.25, w/2, h/2, h*0.7);
-  grad.addColorStop(0, 'rgba(0,0,0,0)');
-  grad.addColorStop(0.5, 'rgba(0,0,0,0)');
-  grad.addColorStop(0.75, 'rgba(0,0,0,0.08)');
-  grad.addColorStop(0.9, 'rgba(0,0,0,0.18)');
-  grad.addColorStop(1, 'rgba(0,0,0,0.35)');
-  crtCtx.fillStyle = grad;
-  crtCtx.fillRect(0, 0, w, h);
-
-  // 3. Subtle center glow (phosphor glow)
-  const glow = crtCtx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w*0.25);
-  glow.addColorStop(0, 'rgba(0,200,0,0.03)');
-  glow.addColorStop(1, 'rgba(0,200,0,0)');
-  crtCtx.fillStyle = glow;
-  crtCtx.fillRect(0, 0, w, h);
-
-  // 4. Scanline halation — extra phosphor persistence bands
-  crtCtx.fillStyle = 'rgba(0,255,0,0.006)';
-  for (let y = 0; y < h; y += 4) {
-    crtCtx.fillRect(0, y, w, 1);
-  }
 }
 
 // ─── KEYBOARD ───
