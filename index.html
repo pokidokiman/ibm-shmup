@@ -69,7 +69,7 @@ function boot(){
   br=true;bd=false;bootEl.style.display='none';titleEl.style.display='none';
   let li=0,ci=0,mem=0,bt='';
   function n(){
-    if(li>=bL.length){bt+='\n\n$ INSERT COIN';bootEl.textContent=bt;br=false;bd=true;return}
+    if(li>=bL.length){bt+='\n\n$ INSERT COIN';bootEl.textContent=bt;br=false;bd=true;titleEl.style.display='flex';return}
     const l=bL[li];
     if(l.mem){
       mem=0;(function mt(){
