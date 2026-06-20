@@ -29,6 +29,7 @@ var _memory_kb: int = 0
 var _is_typing: bool = false
 var _boot_done: bool = false
 var _cancelled: bool = false
+var _rain_time: float = 0.0
 
 func _ready() -> void:
 	title_screen.hide()
@@ -37,6 +38,13 @@ func _ready() -> void:
 	boot_text.text = ""
 	_start_boot()
 
+func _process(delta: float) -> void:
+	# Drive the matrix rain time uniform every frame.
+	var mat := matrix_rain.material as ShaderMaterial
+	if mat:
+		_rain_time += delta
+		mat.set_shader_parameter("time", _rain_time)
+
 func _start_boot() -> void:
 	_current_line = 0
 	_current_char = 0
@@ -44,6 +52,7 @@ func _start_boot() -> void:
 	_boot_done = false
 	_cancelled = false
 	boot_text.text = ""
+	_rain_time = 0.0
 	_type_next()
 
 func _type_next() -> void:
@@ -138,4 +147,3 @@ func _input(event: InputEvent) -> void:
 		GameManager.start_playing()
 	elif event.is_action_pressed("confirm") and not _boot_done:
 		skip_to_title()
-
