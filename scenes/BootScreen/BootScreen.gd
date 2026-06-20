@@ -4,6 +4,7 @@ extends CanvasLayer
 @onready var cursor := $Cursor
 @onready var matrix_rain := $MatrixRain
 @onready var title_screen := $TitleScreen
+@onready var press_space := $TitleScreen/PressSpace as Label
 
 const BOOT_LINES := [
 	{text = "", delay = 0.2},
@@ -30,6 +31,9 @@ var _is_typing: bool = false
 var _boot_done: bool = false
 var _cancelled: bool = false
 
+var _floppy_played: bool = false
+var _rain_time: float = 0.0
+
 func _ready() -> void:
 	title_screen.hide()
 	matrix_rain.hide()
@@ -37,13 +41,22 @@ func _ready() -> void:
 	boot_text.text = ""
 	_start_boot()
 
+func _process(delta: float) -> void:
+	# Drive the matrix rain time uniform every frame.
+	var mat := matrix_rain.material as ShaderMaterial
+	if mat:
+		_rain_time += delta
+		mat.set_shader_parameter("time", _rain_time)
+
 func _start_boot() -> void:
 	_current_line = 0
 	_current_char = 0
 	_memory_kb = 0
 	_boot_done = false
 	_cancelled = false
+	_floppy_played = false
 	boot_text.text = ""
+	_rain_time = 0.0
 	_type_next()
 
 func _type_next() -> void:
@@ -77,6 +90,9 @@ func _type_next() -> void:
 		_type_next()
 
 func _memory_count_up() -> void:
+	if not _floppy_played:
+		_floppy_played = true
+		AudioManager.play_floppy_seek()
 	if _cancelled:
 		return
 	
@@ -116,6 +132,16 @@ func _show_title() -> void:
 	var mat := matrix_rain.material as ShaderMaterial
 	if mat:
 		mat.set_shader_parameter("intensity", 0.3)
+	_start_press_space_pulse()
+
+func _start_press_space_pulse() -> void:
+	if press_space == null:
+		return
+	
+	var tween = create_tween().set_loops()
+	press_space.modulate.a = 1.0
+	tween.tween_property(press_space, "modulate:a", 0.4, 1.5)
+	tween.tween_property(press_space, "modulate:a", 1.0, 1.5)
 
 func skip_to_title() -> void:
 	_cancelled = true
@@ -138,4 +164,3 @@ func _input(event: InputEvent) -> void:
 		GameManager.start_playing()
 	elif event.is_action_pressed("confirm") and not _boot_done:
 		skip_to_title()
-
