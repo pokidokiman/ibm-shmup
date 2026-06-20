@@ -1,0 +1,27 @@
+[gd_scene load_steps=4 format=3 uid="uid://drrwq2gdn3bub"]
+
+[ext_resource type="Script" path="res://scenes/Powerup.gd" id="1_hrhhn"]
+
+[sub_resource type="RectangleShape2D" id="1"]
+size = Vector2(30, 18)
+
+[node name="Powerup" type="Node2D"]
+
+[node name="Area2D" type="Area2D" parent="."]
+collision_layer = 16
+collision_mask = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D"]
+shape = SubResource("1")
+
+[node name="Label" type="Label" parent="."]
+anchors_preset = 0
+offset_left = -15.0
+offset_top = -9.0
+offset_right = 15.0
+offset_bottom = 9.0
+theme_override_colors/font_color = Color(1, 0.87, 0, 1)
+theme_override_font_sizes/font_size = 16
+text = "P"
+horizontal_alignment = 1
+vertical_alignment = 1

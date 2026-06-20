@@ -1,0 +1,22 @@
+# Godot generated
+*.import
+*.godot
+.import/
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# Build artifacts
+.bin/
+.export/
+export_presets.cfg
+
+# OS
+Thumbs.db
+Desktop.ini

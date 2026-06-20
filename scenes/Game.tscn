@@ -1,0 +1,36 @@
+[gd_scene format=3 uid="uid://dhhqk2qci8kpq"]
+
+[ext_resource type="Script" path="res://scenes/Game.gd" id="1_akcxq"]
+[ext_resource type="PackedScene" path="res://scenes/Background/Background.tscn" id="2_htj0q"]
+[ext_resource type="PackedScene" path="res://scenes/Player/Player.tscn" id="3_e5mkq"]
+[ext_resource type="PackedScene" path="res://scenes/BootScreen/BootScreen.tscn" id="4_dc2vu"]
+[ext_resource type="PackedScene" path="res://scenes/HUD/HUD.tscn" id="5_yan0k"]
+[ext_resource type="PackedScene" path="res://scenes/CRTOverlay/CRTOverlay.tscn" id="6_pj14r"]
+[ext_resource type="PackedScene" path="res://scenes/GameOver/GameOver.tscn" id="7_t2u6u"]
+[ext_resource type="Script" path="res://scenes/WaveManager.gd" id="8_tp7wc"]
+
+[node name="Game" type="Node2D"]
+script = ExtResource("1_akcxq")
+
+[node name="Background" parent="." instance=ExtResource("2_htj0q")]
+
+[node name="BulletContainer" type="Node2D" parent="."]
+
+[node name="EnemyBulletContainer" type="Node2D" parent="."]
+
+[node name="EnemyContainer" type="Node2D" parent="."]
+
+[node name="PowerupContainer" type="Node2D" parent="."]
+
+[node name="WaveManager" type="Node" parent="."]
+script = ExtResource("8_tp7wc")
+
+[node name="Player" parent="." instance=ExtResource("3_e5mkq")]
+
+[node name="BootScreen" parent="." instance=ExtResource("4_dc2vu")]
+
+[node name="HUD" parent="." instance=ExtResource("5_yan0k")]
+
+[node name="GameOver" parent="." instance=ExtResource("7_t2u6u")]
+
+[node name="CRTOverlay" parent="." instance=ExtResource("6_pj14r")]

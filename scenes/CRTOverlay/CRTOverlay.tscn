@@ -1,0 +1,32 @@
+[gd_scene load_steps=4 format=3 uid="uid://bgmypdb3flc4v"]
+
+[ext_resource type="Script" path="res://scenes/CRTOverlay/CRTOverlay.gd" id="1_7jcei"]
+[ext_resource type="Shader" path="res://shaders/crt_overlay.gdshader" id="2_jmuak"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_6i8ap"]
+shader = ExtResource("2_jmuak")
+shader_parameter/barrel_power = 1.2
+shader_parameter/scanline_intensity = 0.15
+shader_parameter/vignette_intensity = 0.6
+shader_parameter/phosphor_green = 0.85
+shader_parameter/aberration_strength = 0.002
+shader_parameter/raster_tear_active = false
+shader_parameter/raster_tear_offset = 0.0
+shader_parameter/raster_tear_y = 200.0
+shader_parameter/raster_tear_height = 40.0
+shader_parameter/time = 0.0
+
+[node name="CRTOverlay" type="CanvasLayer"]
+layer = 128
+
+[node name="ColorRect" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+material = SubResource("ShaderMaterial_6i8ap")
+color = Color(1, 1, 1, 1)
+mouse_filter = 2

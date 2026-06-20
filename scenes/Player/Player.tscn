@@ -1,0 +1,32 @@
+[gd_scene load_steps=5 format=3 uid="uid://dapsip7vpcwcn"]
+
+[ext_resource type="Script" path="res://scenes/Player/Player.gd" id="1_y2b1k"]
+
+[sub_resource type="RectangleShape2D" id="1"]
+size = Vector2(24, 30)
+
+[sub_resource type="RectangleShape2D" id="2"]
+size = Vector2(24, 30)
+
+[node name="Player" type="CharacterBody2D" node_paths=PackedStringArray("sprite", "collision", "fire_timer")]
+script = ExtResource("1_y2b1k")
+speed = 300.0
+fire_rate = 0.1
+invincibility_duration = 2.0
+
+[node name="Sprite" type="Sprite2D" parent="."]
+scale = Vector2(2, 2)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("1")
+
+[node name="Hitbox" type="Area2D" parent="." input_pickable=true]
+monitoring = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hitbox"]
+shape = SubResource("2")
+
+[node name="FireTimer" type="Timer" parent="."]
+wait_time = 0.1
+one_shot = true
+

@@ -1,0 +1,101 @@
+[gd_scene load_steps=2 format=3 uid="uid://cok7x3qjhaox2"]
+
+[ext_resource type="Script" path="res://scenes/HUD/HUD.gd" id="1_ugf5j"]
+
+[node name="HUD" type="CanvasLayer"]
+layer = 64
+
+[node name="ScoreLabel" type="Label" parent="."]
+anchors_preset = 0
+offset_left = 120.0
+offset_top = 8.0
+offset_right = 320.0
+offset_bottom = 28.0
+theme_override_colors/font_color = Color(0.2, 1, 0.2, 1)
+theme_override_font_sizes/font_size = 14
+text = "SCORE 00000"
+horizontal_alignment = 0
+vertical_alignment = 0
+
+[node name="HighScoreLabel" type="Label" parent="."]
+anchors_preset = 0
+offset_left = 800.0
+offset_top = 8.0
+offset_right = 1000.0
+offset_bottom = 28.0
+theme_override_colors/font_color = Color(0.2, 1, 0.2, 1)
+theme_override_font_sizes/font_size = 14
+text = "HI 00000"
+horizontal_alignment = 2
+vertical_alignment = 0
+
+[node name="LivesLabel" type="Label" parent="."]
+anchors_preset = 0
+offset_left = 120.0
+offset_top = 740.0
+offset_right = 280.0
+offset_bottom = 760.0
+theme_override_colors/font_color = Color(0.2, 1, 0.2, 1)
+theme_override_font_sizes/font_size = 14
+text = "▲ ▲ ▲"
+horizontal_alignment = 0
+vertical_alignment = 2
+
+[node name="PowerLabel" type="Label" parent="."]
+anchors_preset = 0
+offset_left = 800.0
+offset_top = 740.0
+offset_right = 920.0
+offset_bottom = 760.0
+theme_override_colors/font_color = Color(0.2, 1, 0.2, 1)
+theme_override_font_sizes/font_size = 14
+text = "PWR:1"
+horizontal_alignment = 2
+vertical_alignment = 2
+
+[node name="WaveLabel" type="Label" parent="."]
+anchors_preset = 0
+offset_left = 450.0
+offset_top = 740.0
+offset_right = 574.0
+offset_bottom = 760.0
+theme_override_colors/font_color = Color(0.2, 1, 0.2, 0.4)
+theme_override_font_sizes/font_size = 14
+text = "WAVE 0"
+horizontal_alignment = 1
+vertical_alignment = 2
+
+[node name="ComboLabel" type="Label" parent="."]
+anchors_preset = 0
+offset_left = 462.0
+offset_top = 32.0
+offset_right = 562.0
+offset_bottom = 52.0
+theme_override_colors/font_color = Color(1, 0.87, 0, 1)
+theme_override_font_sizes/font_size = 18
+text = "×2"
+horizontal_alignment = 1
+vertical_alignment = 0
+
+[node name="BossHPBar" type="Control" parent="."]
+anchors_preset = 0
+offset_left = 212.0
+offset_top = 8.0
+offset_right = 812.0
+offset_bottom = 22.0
+
+[node name="Background" type="ColorRect" parent="BossHPBar"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0.1, 0, 1)
+
+[node name="Fill" type="ColorRect" parent="BossHPBar"]
+anchors_preset = 9
+anchor_bottom = 1.0
+anchor_right = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+color = Color(0, 1, 0, 1)

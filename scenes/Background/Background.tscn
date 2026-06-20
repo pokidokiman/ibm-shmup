@@ -1,0 +1,30 @@
+[gd_scene load_steps=2 format=3 uid="uid://qlk3hq4mxd1l"]
+
+[ext_resource type="Script" path="res://scenes/Background/Background.gd" id="1_h5yio"]
+
+[node name="Background" type="Parallax2D"]
+script = ExtResource("1_h5yio")
+scroll_ignore_camera_zoom = true
+
+[node name="StarsFar" type="Sprite2D" parent="."]
+centered = false
+motion_scale = Vector2(0.1, 0.1)
+
+[node name="StarsMid" type="Sprite2D" parent="."]
+centered = false
+motion_scale = Vector2(0.3, 0.3)
+
+[node name="StarsNear" type="Sprite2D" parent="."]
+centered = false
+motion_scale = Vector2(0.6, 0.6)
+
+[node name="CityLayer" type="Sprite2D" parent="."]
+centered = false
+motion_scale = Vector2(0.3, 0.3)
+
+[node name="Ground" type="ColorRect" parent="."]
+offset_left = 0.0
+offset_top = 764.0
+offset_right = 1024.0
+offset_bottom = 768.0
+color = Color(0.04, 0.16, 0.04, 1)

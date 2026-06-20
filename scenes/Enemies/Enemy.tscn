@@ -1,0 +1,16 @@
+[gd_scene load_steps=4 format=3 uid="uid://c5rvc3naq2756"]
+
+[ext_resource type="Script" path="res://scenes/Enemies/Enemy.gd" id="1_ab56m"]
+
+[sub_resource type="RectangleShape2D" id="1"]
+size = Vector2(24, 20)
+
+[node name="Enemy" type="CharacterBody2D"]
+collision_layer = 4
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("1")
+
+[node name="Sprite" type="Sprite2D" parent="."]
+scale = Vector2(1, 1)
