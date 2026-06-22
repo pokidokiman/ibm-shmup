@@ -4,8 +4,6 @@
 
 **IBM SHMUP** is a retro-futuristic shoot-'em-up rendered in green-on-black ASCII/block graphics, styled after the IBM 5153 CRT monitor. Fly, dodge, and blast through waves of enemies with chiptune audio and a phosphor glow that burns into your retina.
 
-🔗 **Play it live:** https://529fb8bdd7283a.lhr.life
-
 ---
 
 ## Features
