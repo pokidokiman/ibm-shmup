@@ -15,6 +15,8 @@
  * space v=0 is the *bottom* row of the canvas. `spriteUv()` therefore flips v.
  */
 
+import * as THREE from 'three';
+
 /** Sprites per atlas row. */
 export const ATLAS_COLUMNS = 8;
 /** Design grid of a single cell, in canvas pixels. */
@@ -516,7 +518,7 @@ export function drawSprite(g, name, x, y, size = CELL_SIZE, frame = 0) {
  * view (`ok: false`, `texture: null`), so UV lookup never depends on the GPU.
  */
 export function createSpriteAtlas(opts = {}) {
-  const THREE = opts.THREE || (typeof globalThis !== 'undefined' ? globalThis.THREE : null);
+  const three = opts.THREE || THREE;
   const doc = opts.doc || (typeof document !== 'undefined' ? document : null);
   const cell = opts.cell ?? CELL_SIZE;
   const columns = opts.columns ?? ATLAS_COLUMNS;
@@ -532,21 +534,27 @@ export function createSpriteAtlas(opts = {}) {
     canvas.height = height;
     const g = typeof canvas.getContext === 'function' ? canvas.getContext('2d') : null;
     paintAtlas(g, { cell, columns, width, height });
-    if (THREE && typeof THREE.CanvasTexture === 'function') {
-      texture = new THREE.CanvasTexture(canvas);
-      texture.magFilter = opts.filter ?? THREE.NearestFilter;
-      texture.minFilter = THREE.LinearMipMapLinearFilter ?? THREE.LinearFilter;
+    if (three && typeof three.CanvasTexture === 'function') {
+      texture = new three.CanvasTexture(canvas);
+      texture.magFilter = opts.filter ?? three.NearestFilter;
+      texture.minFilter = three.LinearMipMapLinearFilter ?? three.LinearFilter;
       texture.generateMipmaps = true;
-      texture.colorSpace = THREE.SRGBColorSpace ?? undefined;
+      texture.colorSpace = three.SRGBColorSpace ?? undefined;
       texture.needsUpdate = true;
     }
   }
 
   return {
     /** True when the GPU texture exists. */
-    ok: !!texture,
-    canvas,
-    texture,
+    get ok() {
+      return !!texture;
+    },
+    get canvas() {
+      return canvas;
+    },
+    get texture() {
+      return texture;
+    },
     width,
     height,
     cell,
