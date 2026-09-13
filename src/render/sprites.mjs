@@ -436,19 +436,25 @@ export function spriteIndex(name, frame = 0) {
   return base + (((frame % frames) + frames) % frames);
 }
 
-/** @returns {{x:number,y:number,w:number,h:number}} pixel rect of a cell. */
+/**
+ * @returns {{x:number,y:number,w:number,h:number}|null} pixel rect of a cell, or
+ * `null` when the sprite name is unknown — callers can then skip the quad
+ * instead of silently painting the first atlas cell.
+ */
 export function spriteCell(name, frame = 0, cell = CELL_SIZE, columns = ATLAS_COLUMNS) {
   const index = spriteIndex(name, frame);
-  const i = index < 0 ? 0 : index;
-  return { x: (i % columns) * cell, y: Math.floor(i / columns) * cell, w: cell, h: cell, index: i };
+  if (index < 0) return null;
+  return { x: (index % columns) * cell, y: Math.floor(index / columns) * cell, w: cell, h: cell, index };
 }
 
 /**
  * Texture coordinates of a cell, already flipped for `CanvasTexture` (flipY).
- * @returns {{u0:number,v0:number,u1:number,v1:number,uc:number,vc:number,x:number,y:number,w:number,h:number}}
+ * @returns {{u0:number,v0:number,u1:number,v1:number,uc:number,vc:number,x:number,y:number,w:number,h:number}|null}
+ *          `null` for an unknown sprite name.
  */
 export function spriteUv(name, frame = 0, atlasWidth = ATLAS_WIDTH, atlasHeight = ATLAS_HEIGHT, cell = CELL_SIZE, columns = ATLAS_COLUMNS) {
   const r = spriteCell(name, frame, cell, columns);
+  if (!r) return null;
   const u0 = r.x / atlasWidth;
   const u1 = (r.x + r.w) / atlasWidth;
   const v1 = 1 - r.y / atlasHeight;
