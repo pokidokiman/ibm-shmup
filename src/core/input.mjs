@@ -16,6 +16,9 @@
  *     caller may read the action state and the edge in the same frame.
  *   - Letter keys are accepted as `e.code` ("KeyZ") or `e.key` ("z"), and Shift as
  *     both "ShiftLeft"/"ShiftRight" and the generic "Shift".
+ *   - `state` is the live, authoritative action object: scripted replays may write
+ *     it directly (`input.state.left = true`) and the write sticks, because only
+ *     the action a key transition actually touches is recomputed.
  *
  * Pure ES module: no DOM globals, no three, no timers.
  */
@@ -81,8 +84,14 @@ export function createInput() {
   const releasedEdge = Object.create(null);
   const overrides = Object.create(null);
 
-  /** Live action state — the object the game reads every step. */
-  const state = Object.create(null);
+  /**
+   * Live action state — the object the game reads every step. It is a plain
+   * `{}` so callers can deep-compare it, and it is *authoritative*: a scripted
+   * replay may write `input.state.fire = true` directly (tests/game.test.mjs
+   * does exactly that) and the value survives until a real key transition for
+   * that same action recomputes it.
+   */
+  const state = {};
 
   /** Pointer position in target-local pixels plus button mask. */
   const pointer = { x: 0, y: 0, active: false, buttons: 0 };
@@ -95,8 +104,15 @@ export function createInput() {
     state[a] = false;
   }
 
+  /** Recompute one action from its key count and override flag. */
+  const sync = (a) => {
+    state[a] = overrides[a] === true || counts[a] > 0;
+    return state[a];
+  };
+
+  /** Recompute every action (constructor, `clear`, teardown). */
   const refresh = () => {
-    for (const a of ACTIONS) state[a] = overrides[a] || counts[a] > 0;
+    for (const a of ACTIONS) sync(a);
     return state;
   };
 
@@ -111,15 +127,16 @@ export function createInput() {
       for (const a of actions) {
         counts[a]++;
         edge[a] = true;
+        sync(a);
       }
     } else {
       held.delete(code);
       for (const a of actions) {
         counts[a] = Math.max(0, counts[a] - 1);
         releasedEdge[a] = true;
+        sync(a);
       }
     }
-    refresh();
     return true;
   };
 
@@ -132,12 +149,16 @@ export function createInput() {
     overrides[action] = down === true;
     if (down === true) edge[action] = true;
     else releasedEdge[action] = true;
-    return refresh();
+    sync(action);
+    return state;
   };
 
-  /** Immutable-per-frame copy of the action state (safe to store). */
+  /**
+   * Per-frame copy of the action state (safe to store or compare). It never
+   * recomputes anything, so values written straight into `state` are included
+   * and no pending edge is consumed.
+   */
   const snapshot = () => {
-    refresh();
     const out = {};
     for (const a of ACTIONS) out[a] = state[a] === true;
     return out;
