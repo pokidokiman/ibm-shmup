@@ -25,9 +25,10 @@
  *   boss.update(dt, ctx)             // advance; fires danmaku through ctx
  *   boss.damage(n[, ctx])            // must walk every phase, never teleport
  *
- * The event sink is resolved from the runtime ctx (`.emit` function, `.events`
- * array or `.state.events` array) and from the creation config, so a game layer
- * can bind it at spawn time, per-frame, or by assigning `boss.ctx` later.
+ * The event sink is resolved from the runtime ctx (`.emit` / `.emitEvent` /
+ * `.pushEvent` function, `.events` / `.eventQueue` array or `.state.events`
+ * array) and from the creation config, so a game layer can bind it at spawn
+ * time, per-frame, or by assigning `boss.ctx` later.
  *
  * Pure simulation module: no DOM, no three, no timers. All randomness comes from
  * a seeded `createRng`, so seeded replays stay bit-exact.
@@ -285,10 +286,22 @@ export function createBoss(cfg = {}) {
         add(src);
         return;
       }
+      // A bare callback is a valid sink too: `boss.connect(ev => queue.push(ev))`.
+      if (typeof src === 'function') {
+        add(src);
+        return;
+      }
       if (typeof src !== 'object') return;
+      // Every common shape a game layer may use to expose its event queue.
       add(src.emit);
+      add(src.emitEvent);
+      add(src.pushEvent);
       add(src.events);
-      if (src.state && src.state !== src) add(src.state.events);
+      add(src.eventQueue);
+      if (src.state && src.state !== src) {
+        add(src.state.events);
+        add(src.state.eventQueue);
+      }
     };
     scan(runtime);
     scan(options.ctx);
