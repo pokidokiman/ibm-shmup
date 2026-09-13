@@ -76,7 +76,9 @@ enforces it.
 
 1. `node tools/check.mjs` exits 0: files present, every `src/**/*.mjs` parses, purity rule holds,
    `index.html` carries Tailwind CDN + three importmap + `#game-canvas` + module script, no TODOs.
-2. `node --test tests/` exits 0: all contracts above.
+2. `node --test tests/*.test.mjs` exits 0: all contracts above.
+   (NOTE: the bare directory form `node --test tests/` fails on this Node build with
+   "Cannot find module ...\tests" - always use the glob.)
 3. Balance targets in `config.mjs`: player speed ~4.2 px/frame normal, ~1.9 focused; player hitbox
    radius 2; bullet speeds 3.0–9.5 px/frame; boss phase count >= 3 per stage; power tiers 1..4;
    chain timeout 120 frames; extend every 2,000,000 points.
