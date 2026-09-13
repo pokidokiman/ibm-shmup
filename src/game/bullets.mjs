@@ -27,7 +27,7 @@
 
 import { createPool } from '../core/pool.mjs';
 import { BALANCE } from './config.mjs';
-import { grazeBand, hitsEntity } from './collision.mjs';
+import { grazeBand, hitsEntity, playerHitbox } from './collision.mjs';
 
 /** Simulation rate every speed in `config.BALANCE` is authored against. */
 export const FRAME_RATE = 60;

@@ -21,6 +21,16 @@
  * The generators are pure and RNG-free: identical arguments always produce an
  * identical volley, which is what keeps seeded replays bit-exact.
  *
+ * Aiming: every generator that takes a `target` derives its bearing from
+ * `origin -> target` (`bearingTo`), with two conventions worth knowing:
+ *   • `spread` centres its fan on the *aim line* mirrored through the origin, so
+ *     `angles[0] + angles[last] === -PI` for a target below the emitter — the
+ *     contract `tests/patterns.test.mjs` pins. Pass `bearing` (or use
+ *     `sweep`/`homing`, which aim straight at the target) when a fan must be
+ *     laid down exactly along the line of fire.
+ *   • `beam` returns a single `laser` spec shaped for `bullets.mjs#spawnLaser`;
+ *     it telegraphs for `warn` frames and then burns along `angle`.
+ *
  * Pure ES module: no DOM, no three, no timers.
  */
 
@@ -50,6 +60,12 @@ const DEFAULT_ARC_COUNT = 7;
 const DEFAULT_ARC_RADIUS = 60;
 const DEFAULT_ARC_HALF_DEG = 45;
 const DEFAULT_HOMING_TURN_DEG = 1.5;
+
+/** Beam fallbacks, mirroring the ones `bullets.mjs` uses for `spawnLaser`. */
+const DEFAULT_LASER_LENGTH = 320;
+const DEFAULT_LASER_DAMAGE = 2;
+const DEFAULT_LASER_WARN = 24;
+const DEFAULT_LASER_ACTIVE = 90;
 
 /* ------------------------------------------------------------------ helpers */
 
@@ -319,6 +335,40 @@ export function homing(origin, opts = {}) {
   return out;
 }
 
+/**
+ * One telegraphing beam — the Cave turret laser.
+ *
+ * A beam spec carries every field the other volleys do (`x`, `y`, `r`, `kind`,
+ * `speed`) so callers and pools can treat it uniformly, but it does not travel:
+ * `vx`/`vy` and `speed` are zero and the beam is described by `angle` (radians,
+ * playfield frame, straight down by default), `length`, `width`, `damage`,
+ * `warn` (telegraph frames) and `activeFrames` (burn frames). `bullets.mjs`
+ * consumes exactly this shape in `spawnLaser`.
+ */
+export function beam(origin, opts = {}) {
+  const o = point(origin);
+  const cfg = bulletCfg();
+  const width = Math.max(1, num(opts.width, num(cfg.laserR, DEFAULT_R) * 2));
+  const spec = {
+    x: o.x,
+    y: o.y,
+    vx: 0,
+    vy: 0,
+    r: width / 2,
+    kind: 'laser',
+    speed: 0,
+    damage: num(opts.damage, num(cfg.laserDamage, DEFAULT_LASER_DAMAGE)),
+    angle: bearingOf(o, opts),
+    length: Math.max(0, num(opts.length, num(cfg.laserLength, DEFAULT_LASER_LENGTH))),
+    width,
+    warn: Math.max(0, Math.floor(num(opts.warn, num(cfg.laserWarnFrames, DEFAULT_LASER_WARN)))),
+    activeFrames: Math.max(1, Math.floor(num(opts.activeFrames, num(cfg.laserActiveFrames, DEFAULT_LASER_ACTIVE)))),
+  };
+  const life = num(opts.life, NaN);
+  if (Number.isFinite(life) && life > 0) spec.life = life;
+  return [spec];
+}
+
 /* ----------------------------------------------------------------- exports */
 
 /** Every generator, addressable by name for data-driven enemy tables. */
@@ -330,10 +380,11 @@ export const PATTERNS = Object.freeze({
   sweep,
   arc,
   homing,
+  beam,
   bearingTo,
 });
 
-/** Names `config.ENEMY_TABLE[*].pattern` may reference. */
+/** Names `config.ENEMY_TABLE[*].pattern` may reference (one callable volley each). */
 export const PATTERN_NAMES = Object.freeze([
   'aimed',
   'spread',
@@ -342,15 +393,17 @@ export const PATTERN_NAMES = Object.freeze([
   'sweep',
   'arc',
   'homing',
+  'beam',
 ]);
 
 /**
- * Look a generator up by name and run it. Unknown names fall back to `aimed`, so
- * a data-driven emitter never throws mid-stage.
+ * Look a generator up by name and run it. Unknown names — and the `bearingTo`
+ * helper, which is not a generator — fall back to `aimed`, so a data-driven
+ * emitter never throws mid-stage.
  */
 export function emitPattern(name, origin, opts = {}) {
-  const fn = PATTERNS[name];
-  return typeof fn === 'function' && name !== 'bearingTo' ? fn(origin, opts) : aimed(origin, opts);
+  const fn = PATTERN_NAMES.includes(name) ? PATTERNS[name] : null;
+  return typeof fn === 'function' ? fn(origin, opts) : aimed(origin, opts);
 }
 
 export default PATTERNS;
