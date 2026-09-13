@@ -54,12 +54,17 @@ export const PLAYER_DEFAULTS = Object.freeze({
   powerTiers: 4,
   fireCooldown: 4,
   invulnFrames: 120,
+  spawnInvuln: 90,
+  bombInvuln: 180,
   respawnDelay: 45,
   margin: 8,
   fieldWidth: 384,
   fieldHeight: 448,
   spawnX: 0.5,
   spawnY: 0.88,
+  muzzleY: -12,
+  muzzleSpread: 9,
+  focusSpreadScale: 0.35,
 });
 
 const num = (v, fallback) => (typeof v === 'number' && Number.isFinite(v) ? v : fallback);
@@ -78,29 +83,45 @@ const fieldCfg = () => {
 
 const toFrames = (dt) => (typeof dt === 'number' && Number.isFinite(dt) ? dt * FRAME_RATE : 0);
 
-/** Per-tier muzzle layout. Tier 1 is a single stream, tier 4 fans out to four. */
+/**
+ * Per-tier muzzle layout. Tier 1 is a single centred stream, tier 2 splits into
+ * two, tier 3 adds a centre lane and tier 4 fans out to four.
+ *
+ * `dx` is normalised to the config's `muzzleSpread` (so ±1 == the widest stream
+ * of that tier), which keeps every tier in step when the balance number moves.
+ * `angle` is radians clockwise from "up"; focus mode scales both by
+ * `focusSpreadScale` so skilled play gets a narrow, high-dps grouping.
+ */
 const MUZZLES = [
   [{ dx: 0, angle: 0 }],
   [
-    { dx: -5, angle: 0 },
-    { dx: 5, angle: 0 },
+    { dx: -1, angle: 0 },
+    { dx: 1, angle: 0 },
   ],
   [
-    { dx: -7, angle: -0.14 },
+    { dx: -1, angle: -0.14 },
     { dx: 0, angle: 0 },
-    { dx: 7, angle: 0.14 },
+    { dx: 1, angle: 0.14 },
   ],
   [
-    { dx: -9, angle: -0.2 },
-    { dx: -3, angle: -0.06 },
-    { dx: 3, angle: 0.06 },
-    { dx: 9, angle: 0.2 },
+    { dx: -1, angle: -0.2 },
+    { dx: -1 / 3, angle: -0.06 },
+    { dx: 1 / 3, angle: 0.06 },
+    { dx: 1, angle: 0.2 },
   ],
 ];
 
-const MUZZLE_OFFSET_Y = -10;
-/** Focus mode tightens the fan so skilled play keeps a narrow, high-dps stream. */
-const FOCUS_TIGHTEN = 0.45;
+/**
+ * Spawn point resolution: a config value in 0..1 is a fraction of the playfield,
+ * anything else is absolute pixels, and a missing value falls back to the
+ * default fraction. `BALANCE.field.spawnY` is deliberately NOT consulted — that
+ * number is the enemy entry lane above the top edge, not a player position.
+ */
+const spawnAxis = (v, extent, fallbackFrac) => {
+  const n = num(v, NaN);
+  if (Number.isFinite(n)) return n > 0 && n <= 1 ? n * extent : n;
+  return fallbackFrac * extent;
+};
 
 export function createPlayer(opts = {}) {
   const cfg = playerCfg();
@@ -116,8 +137,19 @@ export function createPlayer(opts = {}) {
       1,
       num(cfg.invulnFrames, num(cfg.respawnInvuln, num(cfg.invuln, PLAYER_DEFAULTS.invulnFrames))),
     ),
-    respawnDelay: num(cfg.respawnDelay, PLAYER_DEFAULTS.respawnDelay),
-    margin: num(fieldOpt.margin, num(cfg.margin, PLAYER_DEFAULTS.margin)),
+    // Spawn protection: the shorter shield the ship re-enters the field with.
+    spawnInvuln: Math.max(1, num(cfg.spawnInvuln, PLAYER_DEFAULTS.spawnInvuln)),
+    // A bomb is the panic button, so its shield outlasts the post-hit one.
+    bombInvuln: Math.max(
+      1,
+      num(cfg.bombInvuln, num(cfg.bombInvulnFrames, num(cfg.invulnFrames, PLAYER_DEFAULTS.bombInvuln))),
+    ),
+    respawnDelay: Math.max(0, num(cfg.respawnDelay, PLAYER_DEFAULTS.respawnDelay)),
+    // `clampMargin` is the balance name; `margin` and a per-call field override still win.
+    margin: num(fieldOpt.margin, num(cfg.clampMargin, num(cfg.margin, PLAYER_DEFAULTS.margin))),
+    muzzleY: num(cfg.muzzleY, PLAYER_DEFAULTS.muzzleY),
+    muzzleSpread: num(cfg.muzzleSpread, PLAYER_DEFAULTS.muzzleSpread),
+    focusSpread: num(cfg.focusSpreadScale, PLAYER_DEFAULTS.focusSpreadScale),
     powerTiers: clampInt(num(cfg.powerTiers, balanceOf().powerTiers ?? PLAYER_DEFAULTS.powerTiers), 1, 8),
     maxLives: num(cfg.maxLives, 9),
     maxBombs: num(cfg.maxBombs, 9),
@@ -139,6 +171,7 @@ export function createPlayer(opts = {}) {
     lives: num(cfg.lives, PLAYER_DEFAULTS.lives),
     bombs: num(cfg.bombs, PLAYER_DEFAULTS.bombs),
     alive: true,
+    dying: false,
     respawnTimer: 0,
     field: {
       width: num(fieldOpt.width, PLAYER_DEFAULTS.fieldWidth),
@@ -147,8 +180,8 @@ export function createPlayer(opts = {}) {
   };
 
   const spawn = {
-    x: num(opts.x, player.field.width * num(fieldOpt.spawnX, PLAYER_DEFAULTS.spawnX)),
-    y: num(opts.y, player.field.height * num(fieldOpt.spawnY, PLAYER_DEFAULTS.spawnY)),
+    x: num(opts.x, spawnAxis(cfg.spawnX, player.field.width, PLAYER_DEFAULTS.spawnX)),
+    y: num(opts.y, spawnAxis(cfg.spawnY, player.field.height, PLAYER_DEFAULTS.spawnY)),
   };
 
   function clampToField() {
@@ -170,11 +203,12 @@ export function createPlayer(opts = {}) {
     player.x = spawn.x;
     player.y = spawn.y;
     clampToField();
-    player.invuln = Math.max(setup.invulnFrames, player.invuln);
+    player.invuln = Math.max(setup.spawnInvuln, player.invuln);
     player.fireCooldown = 0;
     player.focus = false;
     player.speed = setup.baseSpeed;
     player.alive = true;
+    player.dying = false;
     player.respawnTimer = 0;
     return player;
   }
@@ -200,13 +234,15 @@ export function createPlayer(opts = {}) {
   function muzzles() {
     const tier = clampInt(player.power, 1, setup.powerTiers);
     const layout = MUZZLES[Math.min(tier, MUZZLES.length) - 1];
-    const tighten = player.focus ? FOCUS_TIGHTEN : 1;
+    // Focus mode tightens both the streams and the fan so skill keeps dps high.
+    const tighten = player.focus ? setup.focusSpread : 1;
+    const spread = setup.muzzleSpread * tighten;
     const out = [];
     for (let i = 0; i < layout.length; i++) {
       const m = layout[i];
       out.push({
-        x: player.x + m.dx * tighten,
-        y: player.y + MUZZLE_OFFSET_Y,
+        x: player.x + m.dx * spread,
+        y: player.y + setup.muzzleY,
         angle: m.angle * tighten,
       });
     }
