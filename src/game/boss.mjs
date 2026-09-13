@@ -135,6 +135,30 @@ for (const tpl of PHASE_TEMPLATES) {
   Object.freeze(tpl);
 }
 
+/**
+ * Variant generator for the (rare) case where a caller asks for more attack
+ * phases than there are templates. The template script is reused but rotated,
+ * sped up slightly and its spiral twist retuned per wrap, so no two phases ever
+ * share an identical volley sequence — "distinct danmaku cycles" holds for any
+ * phase count, not just the three-to-four the stage table authors.
+ */
+function variantCycle(cycle, wrap, index) {
+  const rotation = wrap * 37 + index * 11;
+  const speedScale = 1 + wrap * 0.09;
+  return Object.freeze(
+    cycle.map((step) => {
+      const variant = {
+        ...step,
+        baseDeg: ((num(step.baseDeg, 90) + rotation) % 360 + 360) % 360,
+        speed: num(step.speed, 3) * speedScale,
+      };
+      const twist = num(step.angleStepDeg, 0);
+      variant.angleStepDeg = twist === 0 ? step.angleStepDeg : twist + wrap * 4;
+      return Object.freeze(variant);
+    }),
+  );
+}
+
 /* ---------------------------------------------------------------- factory */
 
 /**
