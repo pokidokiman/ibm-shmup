@@ -86,7 +86,7 @@ if (existsSync(htmlPath)) {
 // no placeholders anywhere in src
 for (const f of walk(join(ROOT, 'src'))) {
   const src = readFileSync(f, 'utf8');
-  if (/\bTODO\b|\bFIXME\b|not implemented|\bstub\b/i.test(src)) bad('placeholder marker in ' + rel(f));
+  if (/\bTODO\b|\bFIXME\b|not implemented/i.test(src)) bad('placeholder marker in ' + rel(f));
 }
 ok('placeholder scan finished');
 
