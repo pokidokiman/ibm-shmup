@@ -12,3 +12,8 @@ Thumbs.db
 # Logs / temp
 *.log
 /tmp/
+
+# headless-chrome profile from the render gate
+.smoke-profile/
+*.pyc
+__pycache__/
