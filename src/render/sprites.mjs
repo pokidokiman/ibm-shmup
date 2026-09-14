@@ -42,6 +42,16 @@ export const PALETTE = {
   violet: '#b07cff',
   cyan: '#7fe6ff',
   cyanDeep: '#1d6f8c',
+  /** Near-black separation ink: silhouette edges and the dark gap inside a bullet. */
+  shadow: '#04120a',
+  /** White-hot core shared by every danmaku body. */
+  core: '#ffffff',
+  /** Saturated bullet rims — one family per readable danmaku silhouette. */
+  rimOrb: '#ff2f8f',
+  rimShell: '#ff3b30',
+  rimWave: '#a45cff',
+  rimCyan: '#37d6ff',
+  rimAmber: '#ffb03a',
 };
 
 const TAU = Math.PI * 2;
@@ -142,6 +152,36 @@ function label(g, text, color, x = 32, y = 32, size = 34) {
   g.restore();
 }
 
+/* ------------------------------------------------------------ readability */
+
+/**
+ * Danmaku body: a saturated rim, a near-black separation band, then a white-hot
+ * core, optionally haloed by a soft glow.
+ *
+ * The layering is what makes a bullet readable at speed: the dark band turns a
+ * soft blob into "bright dot inside a coloured ring", and it survives additive
+ * blending too (near-black adds almost nothing, so it reads as a clean gap).
+ * Every enemy bullet is authored with this so a dense curtain still parses.
+ *
+ * @param {CanvasRenderingContext2D} g
+ * @param {number} x centre (design space)
+ * @param {number} y centre (design space)
+ * @param {number} r rim radius
+ * @param {string} rim saturated family colour
+ * @param {{core?:string,glow?:string,shadow?:string}} [opts]
+ */
+function bulletBody(g, x, y, r, rim, opts = {}) {
+  const core = opts.core ?? PALETTE.core;
+  const shadow = opts.shadow ?? PALETTE.shadow;
+  if (opts.glow) {
+    disc(g, x, y, r * 1.55, radial(g, x, y, r * 1.55, [[0, opts.glow], [0.55, opts.glow], [1, 'rgba(0,0,0,0)']], opts.glow));
+  }
+  disc(g, x, y, r, rim);              // saturated rim
+  disc(g, x, y, r * 0.7, shadow);     // dark separation band
+  disc(g, x, y, r * 0.46, core);      // white-hot core
+  ring(g, x, y, r * 0.98, core, Math.max(1, r * 0.14)); // bright outer edge
+}
+
 /* ------------------------------------------------------------- sprite table */
 
 /**
@@ -178,8 +218,9 @@ export const SPRITE_DEFS = {
     draw(g) {
       g.fillStyle = radial(g, 32, 32, 30, [[0, PALETTE.hot], [0.35, PALETTE.amber], [1, 'rgba(255,154,60,0)']], PALETTE.amber);
       g.fillRect(12, 4, 40, 56);
-      box(g, 27, 4, 10, 56, PALETTE.hot);
-      box(g, 30, 8, 4, 48, '#ffffff');
+      box(g, 22, 4, 20, 56, PALETTE.amber);
+      box(g, 26, 4, 12, 56, PALETTE.hot);
+      box(g, 30, 8, 4, 48, PALETTE.core);
     },
   },
   laser: {
@@ -188,44 +229,41 @@ export const SPRITE_DEFS = {
     draw(g) {
       g.fillStyle = linear(g, 0, 0, 64, 0, [[0, 'rgba(127,230,255,0)'], [0.5, PALETTE.cyan], [1, 'rgba(127,230,255,0)']], PALETTE.cyan);
       g.fillRect(0, 0, 64, 64);
-      box(g, 28, 0, 8, 64, PALETTE.hot);
-      box(g, 31, 0, 2, 64, '#ffffff');
+      box(g, 29, 0, 6, 64, PALETTE.shadow);
+      box(g, 30, 0, 4, 64, PALETTE.hot);
+      box(g, 31, 0, 2, 64, PALETTE.core);
     },
   },
   bulletOrb: {
     frames: 1,
     size: 18,
     draw(g) {
-      disc(g, 32, 32, 22, radial(g, 32, 32, 22, [[0, '#ffffff'], [0.3, PALETTE.hot], [0.6, PALETTE.magenta], [1, 'rgba(176,124,255,0)']], PALETTE.magenta));
-      disc(g, 32, 32, 12, PALETTE.magenta);
-      disc(g, 32, 32, 5, '#ffffff');
+      bulletBody(g, 32, 32, 24, PALETTE.rimOrb, { glow: 'rgba(255,111,174,0.45)', core: PALETTE.core });
     },
   },
   bulletShaft: {
     frames: 1,
     size: 16,
     draw(g) {
-      shape(g, [32, 2, 46, 20, 46, 56, 32, 62, 18, 56, 18, 20], PALETTE.cyan);
-      box(g, 28, 6, 8, 48, PALETTE.hot);
-      box(g, 30, 10, 4, 40, '#ffffff');
+      shape(g, [32, 2, 46, 20, 46, 56, 32, 62, 18, 56, 18, 20], PALETTE.rimCyan, PALETTE.shadow, 2.5);
+      box(g, 26, 12, 12, 40, PALETTE.shadow);
+      box(g, 28, 12, 8, 40, PALETTE.hot);
+      box(g, 30, 14, 4, 36, PALETTE.core);
     },
   },
   bulletShell: {
     frames: 1,
     size: 14,
     draw(g) {
-      disc(g, 32, 32, 20, PALETTE.red, null);
-      disc(g, 32, 32, 12, PALETTE.hot);
-      ring(g, 32, 32, 18, PALETTE.amber, 3);
+      bulletBody(g, 32, 32, 22, PALETTE.rimShell, { glow: 'rgba(255,77,77,0.42)', core: PALETTE.hot });
+      ring(g, 32, 32, 9, PALETTE.shadow, 2);
     },
   },
   bulletWave: {
     frames: 1,
     size: 20,
     draw(g) {
-      shape(g, [32, 4, 50, 22, 44, 52, 32, 60, 20, 52, 14, 22], PALETTE.violet);
-      box(g, 27, 16, 10, 38, PALETTE.hot);
-      box(g, 30, 24, 4, 24, '#ffffff');
+      bulletBody(g, 32, 32, 26, PALETTE.rimWave, { glow: 'rgba(176,124,255,0.45)', core: PALETTE.hot });
     },
   },
   enemyGrunt: {
