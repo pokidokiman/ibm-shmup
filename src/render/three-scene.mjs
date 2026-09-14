@@ -249,6 +249,7 @@ export function createScene(opts = {}) {
     antialias: opts.antialias ?? false,
     alpha: false,
     stencil: false,
+    preserveDrawingBuffer: opts.preserveDrawingBuffer ?? true,
     powerPreference: 'high-performance',
   });
   const maxPixelRatio = Number.isFinite(opts.maxPixelRatio) ? opts.maxPixelRatio : MAX_PIXEL_RATIO;
