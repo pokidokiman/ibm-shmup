@@ -344,6 +344,17 @@ export function createScene(opts = {}) {
    * compile — leaves the plain blit in place: post-processing is polish, and it
    * must never be able to take the playfield down.
    */
+  /**
+   * Keep the CRT pass sampling the CURRENT render target. `tDiffuse` defaults to null when the
+   * factory is called without a texture, and the shader then samples nothing and composites pure
+   * black over a perfectly good world; the target is also recreated on resize, so rebind after it.
+   */
+  function bindCRTSource() {
+    const u = crtPass && crtPass.material && crtPass.material.uniforms;
+    if (u && u.tDiffuse) u.tDiffuse.value = target.texture;
+    return u ? !!u.tDiffuse : false;
+  }
+
   function attachCRT(factory) {
     if (typeof factory !== 'function') return null;
     let pass = null;
@@ -352,6 +363,7 @@ export function createScene(opts = {}) {
         renderer,
         width: target.width,
         height: target.height,
+        texture: target.texture,          // the playfield the CRT glass sits in front of
         tint: stageRecord.tint ?? DEFAULT_STAGE.tint,
         uniforms,
       });
@@ -362,6 +374,7 @@ export function createScene(opts = {}) {
     crtPass = pass;
     if (typeof pass.resize === 'function') pass.resize(target.width, target.height);
     compositeQuad.material = pass.material;
+    bindCRTSource();
     return pass;
   }
 
@@ -394,6 +407,7 @@ export function createScene(opts = {}) {
     uniforms.uResolution.value.set(targetWidth, targetHeight);
     background.setPixelScale(dpr);
     if (crtPass && typeof crtPass.resize === 'function') crtPass.resize(targetWidth, targetHeight);
+    bindCRTSource();          // target.texture was just recreated
     return { ...viewport };
   }
 
@@ -455,6 +469,12 @@ export function createScene(opts = {}) {
     return time;
   }
 
+  /** Stage progress 0..1: accelerates the parallax and drives the scenery. */
+  function setProgress(value) {
+    progress = Math.min(Math.max(Number.isFinite(value) ? value : 0, 0), 1);
+    return progress;
+  }
+
   const onResize = () => resize();
   const autoResize = opts.autoResize ?? true;
   if (autoResize && typeof globalThis.addEventListener === 'function') globalThis.addEventListener('resize', onResize);
@@ -483,6 +503,14 @@ export function createScene(opts = {}) {
     uniforms,
     viewport,
 
+    resize,
+    setStage,
+    setTint,
+    attachCRT,
+    setProgress,
+    draw,
+    destroy,
+
     get width() {
       return VIEW.width;
     },
@@ -504,18 +532,6 @@ export function createScene(opts = {}) {
     get stage() {
       return background.stage;
     },
-
-    /** Stage progress 0..1: accelerates the parallax and drives the scenery. */
-    setProgress(value) {
-      progress = Math.min(Math.max(Number.isFinite(value) ? value : 0, 0), 1);
-      return progress;
-    },
-    setStage,
-    setTint,
-    attachCRT,
-    resize,
-    draw,
-    destroy,
   };
 }
 

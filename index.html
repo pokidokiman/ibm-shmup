@@ -126,6 +126,10 @@
     const canvas = document.getElementById('game-canvas');
     const game = createGame({ seed: SEED, stage: STAGE });
     const scene = createScene({ canvas, stage: STAGE, seed: SEED });
+    // Exposed for the runtime probe (tools/smoke.mjs): lets a test read three's own render
+    // stats and the batch contents, which is the only way to tell a black playfield's cause apart.
+    globalThis.__shmup = { game: null, scene: null, hud: null };
+
     const hud = createHUD({ root: document.getElementById('hud'), chainTimeout: 120 });
 
     /* ------------------------------------------------------------- input ---- */
@@ -239,27 +243,58 @@
     let accumulator = 0;
     let last = performance.now();
 
+    // A single throwing frame must never take the loop down with it: report each
+    // distinct fault once (a broken frame would otherwise flood the console) and
+    // let the very next rAF tick try again.
+    const reported = new Set();
+    function reportFrameError(where, err) {
+      const key = `${where}: ${err && err.message ? err.message : String(err)}`;
+      if (reported.has(key)) return;
+      reported.add(key);
+      console.error(`[ibm-shmup] ${where} threw`, err);
+    }
+
+    globalThis.__shmup.game = game;
+    globalThis.__shmup.scene = scene;
+    globalThis.__shmup.hud = hud;
+
     function frame(now) {
       const elapsed = Math.min(Math.max((now - last) / 1000, 0), MAX_FRAME);
       last = now;
 
-      // Fixed timestep: drain the accumulator in 1/120 s simulation steps.
-      accumulator += elapsed;
-      while (accumulator >= FIXED_STEP) {
-        game.step(FIXED_STEP);
-        accumulator -= FIXED_STEP;
+      try {
+        // Fixed timestep: drain the accumulator in 1/120 s simulation steps. A
+        // fault in the simulation must not cost us the frame — the renderer below
+        // still runs, so the playfield keeps being painted.
+        try {
+          accumulator += elapsed;
+          while (accumulator >= FIXED_STEP) {
+            game.step(FIXED_STEP);
+            accumulator -= FIXED_STEP;
+          }
+        } catch (err) {
+          accumulator = 0;
+          reportFrameError('simulation', err);
+        }
+
+        // Stage progress drives the parallax scroll, then the sprite batches are
+        // rebuilt from live game state and composited through the CRT pass.
+        scene.setProgress(game.state.progress);
+        buildFrame();
+        scene.draw(elapsed);
+
+        // HUD overlays and the engraved bezel readouts.
+        hud.update(game.state, { boss: game.boss, dt: elapsed });
+        hud.drain(game.events);
+        paintBezel();
+      } catch (err) {
+        reportFrameError('frame', err);
+      } finally {
+        // Continuation: the next frame is queued whatever happened above, so the
+        // loop survives a bad frame and keeps drawing every frame.
+        game.events.length = 0;
+        requestAnimationFrame(frame);
       }
-
-      scene.setProgress(game.stage.progress(game.state.frame));
-      buildFrame();
-      scene.draw(elapsed);
-
-      hud.update(game.state, { boss: game.boss, dt: elapsed });
-      hud.drain(game.events);
-      game.events.length = 0;
-
-      paintBezel();
-      requestAnimationFrame(frame);
     }
 
     paintBezel();
