@@ -475,7 +475,11 @@ export function resetEnemy(e, kind = 'grunt', x, y, opts = {}) {
   const hp = Math.max(1, Math.round(num(opts.hp, num(spec.hp, DEFAULT_SPEC.hp))));
   e.hp = hp;
   e.maxHp = hp;
-  e.points = Math.max(0, num(opts.points, num(spec.points, DEFAULT_SPEC.points)));
+  // Mandatory base value: every enemy contributes at least one point to a chain.
+  e.points = Math.max(
+    1,
+    Math.round(num(opts.points, num(spec.points, num(common.basePoints, DEFAULT_SPEC.points)))),
+  );
   e.hitFlash = Math.max(1, Math.round(num(opts.hitFlash, num(spec.hitFlash, common.hitFlash || 6))));
   e.flash = 0;
   e.drop = clamp(num(opts.drop, num(spec.drop, DEFAULT_SPEC.drop)), 0, 1);

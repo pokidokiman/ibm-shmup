@@ -209,7 +209,8 @@ export function createBoss(cfg = {}) {
   const timeoutFrames = Math.max(60, Math.round(num(options.timeoutFrames, num(bossBalance.timeoutFrames, 3600))));
   const deathFrames = Math.max(1, Math.round(num(options.deathFrames, num(bossBalance.deathFrames, 180))));
   const contactR = Math.max(1, num(options.r, num(options.contactR, num(bossBalance.contactR, num(spec.r, 46)))));
-  const points = Math.max(0, Math.round(num(options.points, num(spec.points, num(bossBalance.points, 100000)))));
+  // Mandatory base value: a boss always contributes at least one point to a chain.
+  const points = Math.max(1, Math.round(num(options.points, num(spec.points, num(bossBalance.points, 100000)))));
 
   const seed = num(options.seed, stageNo * 0x9e3779b1 + 0x1badb002) >>> 0;
   const rng = options.rng && typeof options.rng.float === 'function' ? options.rng : createRng(seed);

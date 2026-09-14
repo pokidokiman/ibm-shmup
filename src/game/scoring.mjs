@@ -11,6 +11,18 @@
  * graze counter without touching the chain. Rank is a pressure accumulator that
  * climbs on grazes and kills and bleeds away every quiet frame; the bullet
  * patterns and enemy AI scale their aggression against it.
+ *
+ * Chain payout is the GPS (Get-Point System) formula. For a chain of N kills
+ * whose base values are A, B, ... Z in kill order, the chain pays
+ *
+ *     N*A + (N-1)*B + ... + 1*Z
+ *
+ * so the earliest kill in a long chain is worth the most. Because N is only
+ * known once the chain ends, `addKill()` banks the payout incrementally: every
+ * kill re-pays the running sum of all base values in the chain, which
+ * telescopes to exactly the GPS total once the last link lands. Every enemy
+ * therefore carries a mandatory, strictly positive base value, so no link in a
+ * chain can ever be worth nothing.
  */
 import { BALANCE } from './config.mjs';
 
@@ -28,6 +40,8 @@ const EXTEND_MAX = pick(BALANCE.extendMax, 8);
 const GRAZE_SCORE = pick(BALANCE.grazeScore, 25);
 const HIT_SCORE = pick(BALANCE.scorePerHit, 10);
 const KILL_MULTIPLIER = pick(BALANCE.killMultiplier, 1);
+/** Mandatory base value handed to any enemy that somehow lacks one. */
+const ENEMY_BASE = pick(BALANCE.enemy && BALANCE.enemy.basePoints, BALANCE.enemyBasePoints, HIT_SCORE);
 
 /** Fractional score bonus per chain link, clamped by the configured cap. */
 const CHAIN_STEP = pick(BALANCE.chainStep, BALANCE.chainBonusStep, 0.02);
@@ -67,6 +81,10 @@ export function initScoring(state) {
   if (!Number.isFinite(state.score)) state.score = 0;
   if (!Number.isFinite(state.chain)) state.chain = 0;
   if (!Number.isFinite(state.chainTimer)) state.chainTimer = 0;
+  // GPS ledger: base values in kill order + their running sum (the payout of
+  // the next kill). Both reset when the chain collapses.
+  if (!Array.isArray(state.chainValues)) state.chainValues = [];
+  if (!Number.isFinite(state.chainSum)) state.chainSum = 0;
   if (!Number.isFinite(state.graze)) state.graze = 0;
   if (!Number.isFinite(state.rank)) state.rank = RANK_START;
   if (!Number.isFinite(state.extends)) state.extends = 0;
@@ -81,6 +99,31 @@ export function chainMultiplier(chain) {
   const links = Math.max(0, chain || 0);
   return 1 + Math.min(CHAIN_BONUS_CAP, links * CHAIN_STEP);
 }
+
+/**
+ * GPS chain payout: for a chain of N base values A, B, ... Z in kill order,
+ * returns `N*A + (N-1)*B + ... + 1*Z`. Pure and total, so tests, the HUD and
+ * `addKill()` all agree.
+ *
+ * Accepts either an array of values (`chainScore([100, 600, 300])`) or the
+ * values as separate arguments (`chainScore(100, 600, 300)`). Every value is
+ * clamped to a mandatory minimum of 1 point.
+ */
+export function chainScore(...args) {
+  const values = args.length === 1 && Array.isArray(args[0]) ? args[0] : args;
+  const n = values.length;
+  let total = 0;
+  for (let i = 0; i < n; i++) {
+    const raw = Number.isFinite(values[i]) ? values[i] : ENEMY_BASE;
+    total += (n - i) * Math.max(1, raw);
+  }
+  return Math.max(0, Math.round(total));
+}
+
+/** Alias for {@link chainScore}, named after the GPS (Get-Point System). */
+export const gpsChainScore = chainScore;
+/** Short alias for {@link chainScore}. */
+export const gpsScore = chainScore;
 
 /** Award a life and announce it on the event queue. */
 export function addExtend(state, events) {
@@ -127,36 +170,63 @@ export function addScore(state, points, events) {
   return gained;
 }
 
-/** Base point value an enemy prints, falling back to the per-hit score. */
+/**
+ * Mandatory base value an enemy prints. Every enemy must carry a strictly
+ * positive point value, so a missing / zero / non-finite value falls back to
+ * the configured enemy base (and is clamped to at least one point).
+ */
 export function basePoints(enemy) {
-  return enemy && Number.isFinite(enemy.points) ? enemy.points : HIT_SCORE;
+  const raw = enemy && Number.isFinite(enemy.points) ? enemy.points : ENEMY_BASE;
+  return Math.max(1, Math.round(raw));
 }
 
 /**
- * Points a kill banks at a given chain depth: base value times the chain bonus.
- * Pure, so both the HUD preview and `addKill()` agree on the number.
+ * Legacy per-link preview kept for callers that only know `base` and `chain`:
+ * base value times the fractional chain bonus. The authoritative GPS payout is
+ * `chainScore()` / `addKill()`.
  */
 export function killScore(base, chain) {
-  const value = Number.isFinite(base) ? base : HIT_SCORE;
+  const value = Number.isFinite(base) ? base : ENEMY_BASE;
   return Math.max(1, Math.round(value * KILL_MULTIPLIER * chainMultiplier(chain)));
 }
 
-/** Convenience preview: kill value at the state's current chain depth. */
+/**
+ * Points the next kill would bank right now under the GPS formula: the enemy's
+ * base value re-pays the whole live chain, so a kill deep in a chain is worth
+ * its base plus the running sum of everything before it. Pure, so the HUD
+ * preview and `addKill()` agree.
+ */
 export function scoreForKill(state, enemy) {
-  const chain = state && Number.isFinite(state.chain) ? state.chain : 0;
-  return killScore(basePoints(enemy), chain);
+  const base = basePoints(enemy);
+  const live = !!state && Number.isFinite(state.chainTimer) && state.chainTimer > 0;
+  const sum = live && Number.isFinite(state.chainSum) ? Math.max(0, state.chainSum) : 0;
+  return Math.max(1, Math.round(sum + base));
 }
 
 /**
- * Register a kill: bump the chain, re-arm the chain timer and bank the points.
- * Returns the banked points so callers can display a popup.
+ * Register a kill: bump the chain, re-arm the chain timer and bank the GPS
+ * payout for this link. Because the final chain length is unknown at kill
+ * time, each kill re-pays the running sum of base values in the live chain;
+ * telescoped across the chain that equals `N*A + (N-1)*B + ... + 1*Z`.
+ *
+ * A cold chain (timer run out) starts a fresh ledger. Returns the points this
+ * kill banked so callers can display a popup.
  */
 export function addKill(state, enemy, events) {
   if (!state) return 0;
+  const base = basePoints(enemy);
+  const cold = !(Number.isFinite(state.chainTimer) && state.chainTimer > 0);
+  if (cold) {
+    state.chainValues = [];
+    state.chainSum = 0;
+  }
+  if (!Array.isArray(state.chainValues)) state.chainValues = [];
+  state.chainValues.push(base);
+  state.chainSum = (Number.isFinite(state.chainSum) ? state.chainSum : 0) + base;
   state.chain = (state.chain || 0) + 1;
   state.chainTimer = CHAIN_TIMEOUT;
   gainRank(state, RANK_KILL_GAIN);
-  const points = killScore(basePoints(enemy), state.chain);
+  const points = Math.max(1, Math.round(state.chainSum));
   addScore(state, points, events);
   return points;
 }
@@ -177,6 +247,13 @@ export function addGraze(state, events) {
 
 /* ------------------------------------------------------------------ chain */
 
+/** Drop the live chain counter and its GPS ledger back to a cold start. */
+function collapseChain(state) {
+  state.chain = 0;
+  state.chainValues = [];
+  state.chainSum = 0;
+}
+
 /**
  * Bleed the chain countdown by whole frames; the chain dies at zero. The HUD
  * reads `chain`/`chainTimer` directly, so no extra event type is emitted here.
@@ -186,11 +263,11 @@ export function advanceChain(state, frames = 1, events) {
   const alive = Number.isFinite(state.chainTimer) ? state.chainTimer : 0;
   if (alive <= 0) {
     state.chainTimer = 0;
-    state.chain = 0;
+    collapseChain(state);
     return 0;
   }
   state.chainTimer = Math.max(0, alive - Math.max(0, frames));
-  if (state.chainTimer === 0) state.chain = 0;
+  if (state.chainTimer === 0) collapseChain(state);
   return state.chain;
 }
 
