@@ -184,6 +184,40 @@ def main():
               "key sprites (player/enemy/bullet) present in the page's requests",
               "player/enemy/bullet PNGs are not requested - name mapping still broken")
 
+        # VISIBILITY: loading the art is not the same as drawing it. Count scenery meshes that
+        # actually carry a generated texture AND are big enough on screen to be seen, and check the
+        # playfield is no longer an empty black field.
+        vis = send("Runtime.evaluate", {
+            "expression": """JSON.stringify((() => {
+              let scenic = 0, mapped = 0, big = 0, actorQuads = 0, tinyQuads = 0;
+              const scene = (window.__shmup && window.__shmup.scene) || null;
+              const walk = (o) => {
+                if (!o) return;
+                if (o.isMesh) {
+                  const m = o.material, src = (m && m.map && m.map.image && (m.map.image.src || '')) || '';
+                  if (/scenery/i.test(src)) {
+                    scenic++;
+                    if (m.map) mapped++;
+                    const s = o.scale;
+                    if ((Math.abs(s.x) + Math.abs(s.y)) >= 20) big++;
+                  }
+                  if (/actor|sprite|batch/i.test(o.name || '')) actorQuads++;
+                }
+                (o.children || []).forEach(walk);
+              };
+              if (scene) walk(scene);
+              return { scenic, mapped, big, actorQuads, hasScene: !!scene };
+            })())""",
+            "returnByValue": True})
+        v = json.loads(vis["result"]["result"]["value"])
+        print(f"  ..   scene: {v}")
+        check(v["scenic"] >= 8,
+              f"scene contains {v['scenic']} scenery meshes with generated textures",
+              f"scene contains only {v['scenic']} scenery meshes - the ground is loaded but not drawn")
+        check(v["big"] >= 4,
+              f"{v['big']} scenery meshes are large enough to be visible",
+              f"only {v['big']} scenery meshes are visible-sized - tiles are drawn too small to read")
+
         check((data.get("batchActors") or 0) > 0,
               f"sprite batches populated ({data.get('batchActors')} actors)", "no sprites were queued")
 
