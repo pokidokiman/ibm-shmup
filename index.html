@@ -117,6 +117,7 @@
     import { createScene } from './src/render/three-scene.mjs';
     import { createHUD } from './src/render/hud.mjs';
     import { createGame } from './src/game/game.mjs';
+    import { loadAssets } from './src/render/assets.mjs';
 
     const SEED = 0x1badb002;
     const STAGE = 1;
@@ -125,7 +126,11 @@
 
     const canvas = document.getElementById('game-canvas');
     const game = createGame({ seed: SEED, stage: STAGE });
-    const scene = createScene({ canvas, stage: STAGE, seed: SEED });
+    // Stream the shipped PNG art before the scene exists: `loadAssets()` resolves
+    // to `{ file -> THREE.Texture }` and never rejects (a missing PNG is simply
+    // absent), so the atlas can hold the registry from its very first frame.
+    const assets = await loadAssets();
+    const scene = createScene({ canvas, stage: STAGE, seed: SEED, assets });
     // Exposed for the runtime probe (tools/smoke.mjs): lets a test read three's own render
     // stats and the batch contents, which is the only way to tell a black playfield's cause apart.
     globalThis.__shmup = { game: null, scene: null, hud: null };

@@ -234,6 +234,7 @@ export function createSpriteBatch(opts = {}) {
  *   fxCapacity?: number,
  *   autoResize?: boolean,
  *   crt?: Function|null,
+ *   assets?: Record<string, any>,
  * }} [opts]
  */
 export function createScene(opts = {}) {
@@ -285,7 +286,7 @@ export function createScene(opts = {}) {
 
   /* -------------------------------------------------------- render assets */
 
-  const atlas = createAtlas({ THREE, doc: opts.doc, filter: THREE.NearestFilter });
+  const atlas = createAtlas({ THREE, doc: opts.doc, filter: THREE.NearestFilter, assets: opts.assets });
 
   const background = createBackground({
     seed: opts.seed ?? DEFAULT_SEED,
@@ -500,6 +501,8 @@ export function createScene(opts = {}) {
     layers,
     batches,
     atlas,
+    /** The loaded PNG texture registry (see `./assets.mjs`) held by the sprite system. */
+    assets: atlas.assets,
     background,
     uniforms,
     viewport,

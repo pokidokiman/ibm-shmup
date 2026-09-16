@@ -579,7 +579,12 @@ export function drawSprite(g, name, x, y, size = CELL_SIZE, frame = 0) {
  * Build the atlas texture.
  *
  * Accepts injected collaborators so the module stays usable outside a browser:
- *   `{ THREE, doc, cell, columns, filter }`
+ *   `{ THREE, doc, cell, columns, filter, assets }`
+ * `assets` is the `{ name -> THREE.Texture }` registry produced by
+ * `./assets.mjs` (`loadAssets()`); it is kept as-is on the returned atlas so the
+ * scene's sprite system owns the loaded art without the renderer having to
+ * thread it through every draw call.
+ *
  * Without a DOM canvas and three it still returns a fully populated metadata
  * view (`ok: false`, `texture: null`), so UV lookup never depends on the GPU.
  */
@@ -590,6 +595,7 @@ export function createSpriteAtlas(opts = {}) {
   const columns = opts.columns ?? ATLAS_COLUMNS;
   const width = opts.width ?? ATLAS_WIDTH;
   const height = opts.height ?? ATLAS_HEIGHT;
+  const assets = opts.assets && typeof opts.assets === 'object' ? opts.assets : {};
 
   let canvas = null;
   let texture = null;
@@ -625,6 +631,12 @@ export function createSpriteAtlas(opts = {}) {
     height,
     cell,
     columns,
+    /**
+     * Loaded PNG textures, keyed by file name (`s_player.png`, `bs_core.png`,
+     * …) — the registry handed in by the caller (`./assets.mjs`), stored on the
+     * sprite system so it survives for the whole scene lifetime.
+     */
+    assets,
     names: SPRITE_NAMES,
     count: SPRITE_COUNT,
     /** UV rect of a sprite frame, always available. */
