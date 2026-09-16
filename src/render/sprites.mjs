@@ -1,15 +1,33 @@
 /**
- * sprites.mjs — procedural sprite atlas.
+ * sprites.mjs — the sprite atlas: procedural fallbacks + the generated PNG art.
  *
- * Every sprite in the game is painted with Canvas2D vector calls into a single
- * offscreen canvas, which is then uploaded once as a `THREE.CanvasTexture`.
- * There are no image assets, no fetches and no binary blobs: the atlas is
- * deterministic pixel art generated on boot.
+ * Every sprite in the game lives in one offscreen canvas which is uploaded once
+ * as a `THREE.CanvasTexture`; the batched gameplay layer therefore draws from a
+ * single texture and a single material.
+ *
+ * The canvas is painted in two passes:
+ *
+ *   1. the deterministic vector painters below fill every cell, so the atlas is
+ *      complete and correct the moment the game boots (no assets required);
+ *   2. each sprite that has generated art in `assets/` has its cell replaced by
+ *      the matching PNG as soon as the image decodes.
+ *
+ * The PNG is the source of truth whenever a sprite name matches a file:
+ *
+ *   player / playerHit <- s_player     enemies     <- e_drone / e_popcorn / ...
+ *   bullets            <- b_* / l_beam boss        <- bs_core
+ *   pickups            <- p_*          explosions  <- x_1 ... x_4
+ *
+ * The procedural painting stays as the fallback for every sprite without a PNG
+ * (the generic FX: spark, ring, graze, bombWave), for any file that fails to
+ * load, and for the frames drawn before the art finishes streaming in. Because
+ * the PNG is blitted *into* the atlas cell, the batch contract is untouched:
+ * one texture, one material, UVs from `spriteUv()`.
  *
  * The module is split in two halves:
  *   • pure layout/painting code (works anywhere, even with a tiny 2D-context stub)
  *   • `createSpriteAtlas()` which also builds the GPU texture when three + a DOM
- *     canvas are available.
+ *     canvas are available, and overlays the PNG art on top of it.
  *
  * UV convention: `THREE.CanvasTexture` uploads with `flipY = true`, so texture
  * space v=0 is the *bottom* row of the canvas. `spriteUv()` therefore flips v.
@@ -19,8 +37,12 @@ import * as THREE from 'three';
 
 /** Sprites per atlas row. */
 export const ATLAS_COLUMNS = 8;
-/** Design grid of a single cell, in canvas pixels. */
-export const CELL_SIZE = 64;
+/**
+ * Edge length of a single cell, in canvas pixels. The generated art is authored
+ * at 64–128 px, so a cell is 128 px: a PNG is blitted 1:1 and the procedural
+ * painters scale up to the cell (see `DESIGN`).
+ */
+export const CELL_SIZE = 128;
 /** Square atlas edge, in canvas pixels. */
 export const ATLAS_WIDTH = ATLAS_COLUMNS * CELL_SIZE;
 export const ATLAS_HEIGHT = ATLAS_COLUMNS * CELL_SIZE;
