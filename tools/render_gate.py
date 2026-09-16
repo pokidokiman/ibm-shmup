@@ -155,6 +155,35 @@ def main():
         check(not errors, "page threw no exceptions", "page threw: " + " | ".join(errors[:3]))
         check((data.get("score") or 0) > 0,
               f"simulation advancing (score {data.get('score')})", "simulation is not advancing (score 0)")
+        # INTEGRATION: assert on the network. A procedural fallback renders perfectly while
+        # loading nothing, so "does the world draw" cannot tell wired from unwired. Resource
+        # timing can: the files were either downloaded by this page or they were not.
+        net = send("Runtime.evaluate", {
+            "expression": """JSON.stringify((() => {
+              const urls = performance.getEntriesByType('resource').map(e => e.name);
+              const png = urls.filter(u => /\\/assets\\/.*\\.png$/i.test(u));
+              return {
+                sprites: png.filter(u => !/scenery/i.test(u)).length,
+                scenery: png.filter(u => /scenery/i.test(u)).length,
+                hasPlayer: png.some(u => /s_player\\.png$/i.test(u)),
+                hasEnemy: png.some(u => /e_drone\\.png$/i.test(u)),
+                hasBullet: png.some(u => /b_orb_small\\.png$/i.test(u)),
+                sample: png.slice(0, 3).map(u => u.split('/').pop()),
+              };
+            })())""",
+            "returnByValue": True})
+        n = json.loads(net["result"]["result"]["value"])
+        print(f"  ..   assets fetched: sprites={n['sprites']} scenery={n['scenery']} sample={n['sample']}")
+        check(n["sprites"] >= 20,
+              f"game fetched {n['sprites']} generated sprite PNGs at runtime",
+              f"game fetched only {n['sprites']} sprite PNGs - the generated art is NOT wired in")
+        check(n["scenery"] >= 15,
+              f"game fetched {n['scenery']} generated scenery PNGs at runtime",
+              f"game fetched only {n['scenery']} scenery PNGs - the parallax is not using the art")
+        check(n["hasPlayer"] and n["hasEnemy"] and n["hasBullet"],
+              "key sprites (player/enemy/bullet) present in the page's requests",
+              "player/enemy/bullet PNGs are not requested - name mapping still broken")
+
         check((data.get("batchActors") or 0) > 0,
               f"sprite batches populated ({data.get('batchActors')} actors)", "no sprites were queued")
 
