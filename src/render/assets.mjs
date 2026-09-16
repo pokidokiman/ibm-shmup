@@ -10,6 +10,10 @@
  *     under `assets/` and `assets/scenery/`, keyed by filename without its
  *     extension. The table is a literal so the manifest is identical in the
  *     browser and in Node (there is no filesystem to enumerate client-side);
+ *   • `ALIASES` — the sprite vocabulary used by the rest of the game
+ *     (`player`, `shot`, `enemyGrunt`, …) mapped onto the file that backs it
+ *     (`s_player.png`, `b_shot_player.png`, `e_drone.png`, …), so the atlas can
+ *     resolve a name to its art before it falls back to a procedural painter;
  *   • `loadAssets()` — turns that table into `{ name -> THREE.Texture }`.
  *
  * Every texture is configured for crisp pixel art: nearest-neighbour
@@ -18,9 +22,10 @@
  * `assets/`), and a failure on any single file is swallowed so one missing PNG
  * can never take the whole boot down.
  *
- * `three` is imported lazily so this module can be inspected/imported in a bare
- * Node process (where the browser `three` import map does not exist). Tests may
- * also inject a `three`-compatible namespace via `loadAssets({ three })`.
+ * `three` is imported lazily (there is no static `import ... from 'three'` here)
+ * so this module can be inspected and imported in a bare Node process (where
+ * the browser `three` import map does not exist). Tests may also inject a
+ * `three`-compatible namespace via `loadAssets({ three })`.
  */
 
 /** Directory holding the loose sprite PNGs, relative to the site root. */
@@ -128,6 +133,62 @@ export const ASSET_MANIFEST = buildManifest();
 
 /** Number of files in the manifest. */
 export const ASSET_COUNT = Object.keys(ASSET_MANIFEST).length;
+
+/**
+ * Sprite-name aliases: the name the rest of the game (and the procedural atlas
+ * in `./sprites.mjs`) uses for a sprite, mapped onto the PNG file that backs it.
+ *
+ * The shipped art is named after *what it is* (`s_player.png`, `e_drone.png`,
+ * `b_shot_player.png`, …) while the render layer names sprites after *what they
+ * do* (`player`, `enemyGrunt`, `shot`, …); this table is the one place that
+ * knows both spellings. `./sprites.mjs` resolves every incoming sprite name
+ * through it before touching the atlas, so a name with art hits its file and a
+ * name without one keeps its procedural cell.
+ *
+ * Names that are already file keys map to themselves, so the table is a total
+ * lookup for everything with PNG art.
+ *
+ * @type {Readonly<Record<string, string>>}
+ */
+export const ALIASES = Object.freeze({
+  // ships
+  player: 's_player.png',
+  // enemies
+  enemyGrunt: 'e_drone.png',
+  enemyPopcorn: 'e_popcorn.png',
+  enemyTurret: 'e_turret.png',
+  enemyMidboss: 'e_midboss.png',
+  // shared danmaku
+  bulletOrb: 'b_orb_small.png',
+  shot: 'b_shot_player.png',
+  laser: 'l_beam.png',
+  // boss parts
+  bossCore: 'bs_core.png',
+  // pickups
+  powerPow: 'p_power.png',
+  powerBomb: 'p_bomb.png',
+  powerLife: 'p_life.png',
+  powerScore: 'p_star.png',
+  star: 'p_star.png',
+  power: 'p_power.png',
+  bomb: 'p_bomb.png',
+  // sprite names that already are file keys
+  b_orb_large: 'b_orb_large.png',
+  b_ring: 'b_ring.png',
+  b_needle: 'b_needle.png',
+  b_bubble: 'b_bubble.png',
+  b_plasma: 'b_plasma.png',
+  b_sword: 'b_sword.png',
+  bs_pod: 'bs_pod.png',
+  s_flame: 's_flame.png',
+  x_1: 'x_1.png',
+  x_2: 'x_2.png',
+  x_3: 'x_3.png',
+  x_4: 'x_4.png',
+});
+
+/** Number of entries in {@link ALIASES}. */
+export const ALIAS_COUNT = Object.keys(ALIASES).length;
 
 /**
  * Default base URL: the site root that sits two levels above this module
