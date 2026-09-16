@@ -27,6 +27,7 @@
 import * as THREE from 'three';
 import { createRng } from '../core/rng.mjs';
 import { STAGE_TABLE, FIELD, DEFAULT_STAGE, stageFor } from '../game/config.mjs';
+import { createParallax, themeForStage, BACKDROP_ORDER } from './parallax.mjs';
 
 const W = FIELD.width;
 const H = FIELD.height;
@@ -48,6 +49,9 @@ export const STAR_LAYERS = Object.freeze([
 
 /** Backdrop styles addressable through `STAGE_TABLE[].backdrop`. */
 export const BACKDROP_STYLES = Object.freeze(['shelf', 'trench', 'garden']);
+
+/** Draw order of the starfield: behind the backdrop and every parallax tile. */
+const STAR_ORDER = -960;
 
 /* ------------------------------------------------------------------ helpers */
 
@@ -409,11 +413,28 @@ export function createBackground(opts = {}) {
   group.renderOrder = -1000;
 
   const starLayers = STAR_LAYERS.map((spec, i) => createStarLayer(spec, rng.fork(0x51f + i)));
-  for (const layer of starLayers) group.add(layer.object);
+  // The starfield is the deepest layer: push it behind the scenery and only
+  // show it for the space theme (the dust reads as vacuum, nowhere else).
+  for (let i = 0; i < starLayers.length; i++) {
+    starLayers[i].object.renderOrder = STAR_ORDER + i;
+    group.add(starLayers[i].object);
+  }
 
   const backdropRoot = new THREE.Group();
   backdropRoot.name = 'backdrop';
   group.add(backdropRoot);
+
+  // Scenery is delegated to the parallax stack: far/mid/near tile bands plus a
+  // darkening wash that sits between the scenery and the gameplay sprites.
+  // three is injected rather than imported here, because parallax.mjs has to
+  // stay importable under plain Node where the browser importmap does not exist.
+  const initialStage = resolveStage(opts.stage ?? DEFAULT_STAGE.stage);
+  const parallax = createParallax(group, initialStage, {
+    THREE,
+    seed: opts.seed ?? DEFAULT_STAGE.stage,
+    doc: opts.doc,
+  });
+  let showStars = themeForStage(initialStage) === 'space';
 
   const state = {
     time: 0,
@@ -448,6 +469,11 @@ export function createBackground(opts = {}) {
     if (!build) return;
     const styleRng = rng.fork(0x7a1e ^ (state.stage?.stage ?? 1));
     for (const prop of build(styleRng, state.tint)) {
+      // Legacy backdrop props are the furthest scenery: keep them behind the
+      // parallax tiles (and the darkening overlay) regardless of group nesting.
+      prop.object.traverse((node) => {
+        if (node.isMesh) node.renderOrder = BACKDROP_ORDER;
+      });
       state.props.push(prop);
       backdropRoot.add(prop.object);
     }
@@ -457,11 +483,13 @@ export function createBackground(opts = {}) {
     state.stage = record ?? DEFAULT_STAGE;
     state.style = state.stage.backdrop ?? DEFAULT_STAGE.backdrop;
     state.tint = state.stage.tint ?? DEFAULT_STAGE.tint;
+    showStars = themeForStage(state.stage) === 'space';
+    parallax.setTheme(state.stage);
     rebuildBackdrop();
     return state.stage;
   }
 
-  applyStage(resolveStage(opts.stage ?? DEFAULT_STAGE.stage));
+  applyStage(initialStage);
 
   const initialScale = Number.isFinite(opts.pixelRatio) && opts.pixelRatio > 0 ? opts.pixelRatio : 1;
   if (initialScale !== 1) {
@@ -533,10 +561,13 @@ export function createBackground(opts = {}) {
       state.time += step;
       state.flow = 0.55 + 1.15 * state.progress;
       const dy = state.flow * step * 60;
-      for (const layer of starLayers) {
-        layer.step(dy);
-        layer.twinkle(state.time);
+      if (showStars) {
+        for (const layer of starLayers) {
+          layer.step(dy);
+          layer.twinkle(state.time);
+        }
       }
+      parallax.update(step, state.progress);
       for (const prop of state.props) {
         const o = prop.object;
         o.position.y = wrapY(o.position.y + dy * prop.speed);
@@ -550,11 +581,13 @@ export function createBackground(opts = {}) {
       state.time = 0;
       state.progress = 0;
       state.flow = 1;
+      parallax.reset();
       for (const p of state.props) p.object.position.y = wrapY(p.object.position.y);
     },
 
     dispose() {
       clearBackdrop();
+      parallax.dispose();
       for (const layer of starLayers) {
         group.remove(layer.object);
         layer.dispose();
