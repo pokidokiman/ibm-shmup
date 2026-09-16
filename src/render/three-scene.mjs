@@ -292,6 +292,10 @@ export function createScene(opts = {}) {
     seed: opts.seed ?? DEFAULT_SEED,
     stage: stageRecord,
     pixelRatio: renderer.getPixelRatio(),
+    // Hand the loaded PNG registry down: without it the parallax cannot find the
+    // generated scenery and silently paints its fallback silhouettes instead.
+    assets: opts.assets,
+    doc: opts.doc,
   });
   layers.backdrop.add(background.group);
 

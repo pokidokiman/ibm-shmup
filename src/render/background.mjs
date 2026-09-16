@@ -433,6 +433,9 @@ export function createBackground(opts = {}) {
     THREE,
     seed: opts.seed ?? DEFAULT_STAGE.stage,
     doc: opts.doc,
+    // The generated scenery PNGs. Dropping this is what leaves the stage black:
+    // the parallax then paints neutral silhouettes instead of the shipped art.
+    assets: opts.assets,
   });
   let showStars = themeForStage(initialStage) === 'space';
 
