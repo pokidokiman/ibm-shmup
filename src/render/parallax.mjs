@@ -76,7 +76,7 @@ export const THEME_PALETTES = Object.freeze({
     edge: '#1f2b41',
     glow: '#283c58',
     overlay: '#03060c',
-    overlayOpacity: 0.3,
+    overlayOpacity: 0.15,
   }),
   industrial: Object.freeze({
     sky: '#0b0805',
@@ -85,7 +85,7 @@ export const THEME_PALETTES = Object.freeze({
     edge: '#382c18',
     glow: '#4a3a1c',
     overlay: '#070502',
-    overlayOpacity: 0.3,
+    overlayOpacity: 0.15,
   }),
   desert: Object.freeze({
     sky: '#0d0a06',
@@ -94,7 +94,7 @@ export const THEME_PALETTES = Object.freeze({
     edge: '#3e3320',
     glow: '#5a4828',
     overlay: '#0a0703',
-    overlayOpacity: 0.3,
+    overlayOpacity: 0.15,
   }),
   ocean: Object.freeze({
     sky: '#04090f',
@@ -103,7 +103,7 @@ export const THEME_PALETTES = Object.freeze({
     edge: '#1a3444',
     glow: '#204a5e',
     overlay: '#020609',
-    overlayOpacity: 0.3,
+    overlayOpacity: 0.15,
   }),
   space: Object.freeze({
     sky: '#03050a',
@@ -112,7 +112,7 @@ export const THEME_PALETTES = Object.freeze({
     edge: '#161f30',
     glow: '#1e2a3f',
     overlay: '#010206',
-    overlayOpacity: 0.3,
+    overlayOpacity: 0.15,
   }),
 });
 
@@ -147,9 +147,9 @@ export function themeForStage(stage) {
  * cell so the bands overlap and cover the playfield).
  */
 export const PARALLAX_LAYERS = Object.freeze([
-  Object.freeze({ id: 'far', speed: 7, cols: 3, rows: 4, scale: 1.35, opacity: 0.95, z: -640, jitter: 0.7, shade: 0.55 }),
-  Object.freeze({ id: 'mid', speed: 16, cols: 4, rows: 5, scale: 1.05, opacity: 0.8, z: -460, jitter: 0.8, shade: 0.72 }),
-  Object.freeze({ id: 'near', speed: 30, cols: 5, rows: 6, scale: 0.9, opacity: 0.6, z: -280, jitter: 0.9, shade: 0.95 }),
+  Object.freeze({ id: 'far', speed: 7, cols: 3, rows: 4, scale: 1.35, opacity: 0.95, z: -640, jitter: 0.7, shade: 0.95 }),
+  Object.freeze({ id: 'mid', speed: 16, cols: 4, rows: 5, scale: 1.05, opacity: 0.8, z: -460, jitter: 0.8, shade: 0.98 }),
+  Object.freeze({ id: 'near', speed: 30, cols: 5, rows: 6, scale: 0.9, opacity: 0.6, z: -280, jitter: 0.9, shade: 1.0 }),
 ]);
 
 /** Z / draw order of the darkening wash: above scenery, below the sprites. */
@@ -458,7 +458,7 @@ function disposeNode(node) {
 /** Tint colour for a layer: the theme body dragged toward white, then shaded. */
 function tintFor(three, palette, shade) {
   const body = new three.Color(palette.fill);
-  if (typeof body.lerp === 'function') body.lerp(new three.Color(0xffffff), 0.62);
+  if (typeof body.lerp === 'function') body.lerp(new three.Color(0xffffff), 0.92);
   if (typeof body.multiplyScalar === 'function') body.multiplyScalar(shade);
   return body;
 }
@@ -569,7 +569,11 @@ function stampGroup(group, themeId, built) {
   group.userData.textures = built.textures;
   group.userData.ownedTextures = built.owned;
   group.userData.meshCount = built.layers.reduce((n, layer) => n + layer.entries.length, 0);
-  return group;
+  // Return the descriptor, NOT the group: every accessor and both update loops read
+  // `current.layers` / `current.overlay` / `current.palette`. Returning the group made
+  // them all undefined, so parallax.update() threw "current.layers is not iterable"
+  // on the first frame and the renderer never drew anything at all.
+  return { ...built, theme: themeId, group };
 }
 
 /**
