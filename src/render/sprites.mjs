@@ -34,6 +34,7 @@
  */
 
 import * as THREE from 'three';
+import { ALIASES } from './assets.mjs';
 
 /** Sprites per atlas row. */
 export const ATLAS_COLUMNS = 8;
@@ -517,6 +518,26 @@ export function hasSprite(name) {
 
 /* ------------------------------------------------------------------ painting */
 
+
+/**
+ * The loaded PNG for a sprite name, resolved through `ALIASES` (`player` →
+ * `s_player.png`). Returns `null` when no art was shipped for that name, which is
+ * the signal to fall back to the procedural painter.
+ */
+function assetImage(assets, name) {
+  if (!assets) return null;
+  const alias = ALIASES[name];
+  const candidates = [];
+  if (alias) candidates.push(alias, alias.replace(/\.png$/i, ''));
+  candidates.push(name, name + '.png');
+  for (const key of candidates) {
+    const tex = assets[key];
+    const image = tex && (tex.image || tex);
+    if (image && (image.width > 0 || image.naturalWidth > 0)) return image;
+  }
+  return null;
+}
+
 /**
  * Paint every sprite into a 2D context (transparent background).
  * Coordinates: each cell is drawn in a 64×64 design space, top-left origin.
@@ -524,12 +545,30 @@ export function hasSprite(name) {
 export function paintAtlas(g, opts = {}) {
   const cell = opts.cell ?? CELL_SIZE;
   const columns = opts.columns ?? ATLAS_COLUMNS;
+  const assets = opts.assets && typeof opts.assets === 'object' ? opts.assets : null;
   if (!g || typeof g.fillRect !== 'function') return false;
   if (typeof g.clearRect === 'function') g.clearRect(0, 0, opts.width ?? ATLAS_WIDTH, opts.height ?? ATLAS_HEIGHT);
+  if (typeof g.imageSmoothingEnabled === 'boolean') g.imageSmoothingEnabled = false;
   for (const entry of SPRITE_LAYOUT) {
     const def = SPRITE_DEFS[entry.name];
-    if (!def || typeof def.draw !== 'function') continue;
     const r = spriteCell(entry.name, entry.frame, cell, columns);
+    if (!r) continue;
+    // The shipped PNG wins: blit it 1:1 into its cell (nearest neighbour, so the
+    // pixel grid survives upscaling). Only a sprite with no art of its own falls
+    // through to the procedural painter — which is what every sprite used to get,
+    // silently, while 25 loaded PNGs sat unused in the registry.
+    const image = assetImage(assets, entry.name);
+    if (image && typeof g.drawImage === 'function') {
+      try {
+        g.save();
+        g.drawImage(image, r.x, r.y, cell, cell);
+        g.restore();
+        continue;
+      } catch {
+        /* an undecodable image must not cost us the sprite: fall back below */
+      }
+    }
+    if (!def || typeof def.draw !== 'function') continue;
     g.save();
     g.translate(r.x, r.y);
     withUnit(g, cell, () => def.draw(g, cell, entry.frame));
@@ -581,7 +620,7 @@ export function createSpriteAtlas(opts = {}) {
     canvas.width = width;
     canvas.height = height;
     const g = typeof canvas.getContext === 'function' ? canvas.getContext('2d') : null;
-    paintAtlas(g, { cell, columns, width, height });
+    paintAtlas(g, { cell, columns, width, height, assets });
     if (three && typeof three.CanvasTexture === 'function') {
       texture = new three.CanvasTexture(canvas);
       texture.magFilter = opts.filter ?? three.NearestFilter;
