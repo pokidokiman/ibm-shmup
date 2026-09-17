@@ -91,8 +91,8 @@ const PHASE_TEMPLATES = [
     tint: '#7dff8a',
     cycle: [
       { pattern: 'ring', count: 20, speed: 3.1, kind: 'pellet', baseDeg: 90 },
-      { pattern: 'spread', count: 5, arcDeg: 26, speed: 3.7, kind: 'orb', aim: 'player' },
-      { pattern: 'sweep', count: 9, arcDeg: 34, speed: 4.0, kind: 'dart', aim: 'player' },
+      { pattern: 'spread', count: 5, arcDeg: 26, speed: 3.7, kind: 'orb' },
+      { pattern: 'sweep', count: 9, arcDeg: 34, speed: 4.0, kind: 'dart' },
       { pattern: 'aimed', count: 1, speed: 4.4, kind: 'dart', aim: 'player' },
     ],
   },
@@ -103,16 +103,16 @@ const PHASE_TEMPLATES = [
       { pattern: 'spiralStep', count: 7, angleStepDeg: 15, speed: 3.6, kind: 'orb', baseDeg: 90 },
       { pattern: 'spiralStep', count: 7, angleStepDeg: 15, speed: 3.6, kind: 'orb', baseDeg: 218 },
       { pattern: 'ring', count: 24, speed: 3.3, kind: 'star', baseDeg: 15 },
-      { pattern: 'spread', count: 7, arcDeg: 40, speed: 4.5, kind: 'dart', aim: 'player' },
+      { pattern: 'spread', count: 7, arcDeg: 40, speed: 4.5, kind: 'dart' },
     ],
   },
   {
     name: 'LATTICE',
     tint: '#ff6fae',
     cycle: [
-      { pattern: 'arc', count: 11, radius: 72, arcDeg: 120, speed: 4.1, kind: 'orb', aim: 'player' },
+      { pattern: 'arc', count: 11, radius: 72, arcDeg: 120, speed: 4.1, kind: 'orb' },
       { pattern: 'ring', count: 30, speed: 3.4, kind: 'star', baseDeg: 7 },
-      { pattern: 'spread', count: 9, arcDeg: 62, speed: 4.8, kind: 'dart', aim: 'player' },
+      { pattern: 'spread', count: 9, arcDeg: 62, speed: 4.8, kind: 'dart' },
       { pattern: 'homing', count: 5, arcDeg: 54, speed: 3.9, kind: 'orb', aim: 'player', turnDeg: 1.1 },
     ],
   },
@@ -122,8 +122,8 @@ const PHASE_TEMPLATES = [
     cycle: [
       { pattern: 'spiralStep', count: 9, angleStepDeg: 31, speed: 4.6, kind: 'orb', baseDeg: 90 },
       { pattern: 'ring', count: 34, speed: 3.8, kind: 'star', baseDeg: 23 },
-      { pattern: 'sweep', count: 5, arcDeg: 58, speed: 5.2, kind: 'dart', burst: 2, burstArcDeg: 20, aim: 'player' },
-      { pattern: 'spread', count: 13, arcDeg: 84, speed: 5.0, kind: 'pellet', aim: 'player' },
+      { pattern: 'sweep', count: 5, arcDeg: 58, speed: 5.2, kind: 'dart', burst: 2, burstArcDeg: 20 },
+      { pattern: 'spread', count: 13, arcDeg: 84, speed: 5.0, kind: 'pellet' },
     ],
   },
 ];

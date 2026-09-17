@@ -164,6 +164,8 @@ export const BALANCE = {
 
   /** Boss pressure/telegraph tuning. */
   boss: {
+    aim: 'fixed',
+    baseAngleDeg: 90,
     hpScale: 1,
     timeoutFrames: 3600,
     /** Frames between attack cycles while a phase is active. */
@@ -300,6 +302,8 @@ export const DROP_CHANCE = {
  */
 export const ENEMY_TABLE = {
   popcorn: {
+    aim: 'fixed',
+    baseAngleDeg: 90,
     hp: 4,
     r: 10,
     speed: 3.0,
@@ -315,21 +319,25 @@ export const ENEMY_TABLE = {
     drop: 0.18,
   },
   grunt: {
+    aim: 'fixed',
+    baseAngleDeg: 90,
     hp: 12,
     r: 13,
     speed: 1.8,
     points: 320,
     script: 'crossDown',
-    pattern: 'aimed',
+    pattern: 'spread',
     fireCd: 96,
     burst: 1,
-    spreadDeg: 0,
+    spreadDeg: 26,
     bulletSpeed: 3.6,
     sprite: 'grunt',
     hitFlash: 6,
     drop: 0.3,
   },
   turret: {
+    aim: 'fixed',
+    baseAngleDeg: 90,
     hp: 44,
     r: 20,
     speed: 0.7,
@@ -337,7 +345,7 @@ export const ENEMY_TABLE = {
     script: 'hold',
     pattern: 'ring',
     fireCd: 84,
-    burst: 2,
+    burst: 3,
     spreadDeg: 0,
     bulletSpeed: 4.2,
     sprite: 'turret',
@@ -345,6 +353,8 @@ export const ENEMY_TABLE = {
     drop: 0.55,
   },
   heavy: {
+    aim: 'fixed',
+    baseAngleDeg: 90,
     hp: 96,
     r: 24,
     speed: 1.0,
@@ -360,6 +370,8 @@ export const ENEMY_TABLE = {
     drop: 0.75,
   },
   midboss: {
+    aim: 'fixed',
+    baseAngleDeg: 90,
     hp: 520,
     r: 34,
     speed: 1.2,

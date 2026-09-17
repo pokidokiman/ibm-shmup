@@ -224,7 +224,7 @@ const STAGE1_PLAN = [
   [38, 'line', 'grunt', 5, { gap: 12, spread: 0.6, section: 'ramp' }],
   [38, 'column', 'turret', 1, { hold: 0.18, holdFrames: 300, drop: 0.8, pattern: 'ring', section: 'ramp' }],
   [40, 'sweep', 'popcorn', 7, { spread: 0.82, gap: 10, section: 'ramp' }],
-  [41, 'echelon', 'grunt', 7, { gap: 14, pattern: 'aimed', section: 'ramp' }],
+  [41, 'echelon', 'grunt', 7, { gap: 14, pattern: 'spread', section: 'ramp' }],
   [43, 'stream', 'popcorn', 8, { lane: 0.5, gap: 14, section: 'ramp' }],
   [43, 'line', 'heavy', 2, { spread: 0.5, hold: 0.2, drop: 0.85, section: 'ramp' }],
   [44, 'pincer', 'grunt', 7, { gap: 12, section: 'ramp' }],

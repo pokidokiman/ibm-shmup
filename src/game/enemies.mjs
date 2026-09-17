@@ -287,6 +287,14 @@ function kindAt(i) {
   return kinds[i % kinds.length];
 }
 
+function localBearing(origin, opts) {
+  if (opts && opts.aim !== 'player') {
+    const explicit = Number(opts.bearing);
+    if (Number.isFinite(explicit)) return explicit;
+  }
+  return aimAngle(origin, opts.target);
+}
+
 function aimAngle(origin, target) {
   const tx = target && Number.isFinite(target.x) ? target.x : origin.x;
   const ty = target && Number.isFinite(target.y) ? target.y : origin.y + 100;
@@ -323,7 +331,7 @@ function localPattern(name, origin, opts) {
   }
   if (name === 'spread' || name === 'sweep') {
     const arc = num(opts.arcDeg, 30) * DEG;
-    const base = aimAngle(origin, opts.target);
+    const base = localBearing(origin, opts);
     const shift = name === 'sweep' ? Math.sin(num(opts.index, 0) * 0.9) * arc * 0.25 : 0;
     for (let i = 0; i < count; i++) {
       const t = count === 1 ? 0.5 : i / (count - 1);
@@ -343,8 +351,9 @@ function localPattern(name, origin, opts) {
     }
     return out;
   }
-  // 'aimed' and anything unknown: a single shot straight at the ship.
-  const a = aimAngle(origin, opts.target);
+  // 'aimed' and anything unknown: a single shot (at the ship only when the
+  // archetype asks for it; otherwise down the fixed bearing).
+  const a = name === 'aimed' ? aimAngle(origin, opts.target) : localBearing(origin, opts);
   for (let i = 0; i < count; i++) {
     out.push(spec(origin.x, origin.y, Math.cos(a) * speed, Math.sin(a) * speed, r, kindAt(i)));
   }
@@ -426,22 +435,28 @@ export function enemyFire(e, ctx) {
       : { x: e.entryX, y: fieldCfg().height };
   const burst = Math.max(1, Math.round(e.burst || 1));
   const speed = volleySpeed(e, ctx);
+  // Aiming is the exception, not the rule. Cave fodder fires FIXED patterns the
+  // player weaves through; only designated punish enemies track the ship. An
+  // explicit `bearing` wins inside patterns.mjs (`aimBearing` checks it first),
+  // so a fixed volley can never inherit the aimed facing below.
+  const aiming = e.aim === 'player' && !!(ctx && ctx.player);
+  const baseAngle = Number.isFinite(e.baseAngleDeg) ? e.baseAngleDeg * DEG : Math.PI / 2;
   const opts = {
     target,
     speed,
+    bearing: aiming ? undefined : baseAngle,
+    aim: aiming ? 'player' : 'fixed',
     count:
-      e.pattern === 'spread'
+      e.pattern === 'spread' || e.pattern === 'sweep' || e.pattern === 'nway' || e.pattern === 'arc'
         ? burst * 2 + 1
         : e.pattern === 'ring'
-          ? burst * 3
-          : e.pattern === 'arc'
-            ? burst * 2 + 1
-            : burst,
+          ? Math.max(6, burst * 4)
+          : burst,
     arcDeg: e.spreadDeg > 0 ? e.spreadDeg : 30,
     angleStepDeg: e.spiralStepDeg,
     index: e.volley,
     radius: e.r * 2.4,
-    facing: Math.atan2(target.y - e.y, target.x - e.x),
+    facing: aiming ? Math.atan2(target.y - e.y, target.x - e.x) : baseAngle,
     r: num(bulletCfg().enemyR, 5),
   };
   const specs = resolveSpecs(e.pattern, origin, opts, ctx);
