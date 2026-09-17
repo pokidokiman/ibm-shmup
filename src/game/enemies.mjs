@@ -450,7 +450,7 @@ export function enemyFire(e, ctx) {
       e.pattern === 'spread' || e.pattern === 'sweep' || e.pattern === 'nway' || e.pattern === 'arc'
         ? burst * 2 + 1
         : e.pattern === 'ring'
-          ? Math.max(6, burst * 4)
+          ? Math.max(6, burst * 3)
           : burst,
     arcDeg: e.spreadDeg > 0 ? e.spreadDeg : 30,
     angleStepDeg: e.spiralStepDeg,

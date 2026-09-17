@@ -520,6 +520,34 @@ export function hasSprite(name) {
 
 
 /**
+ * Brightness lift applied when blitting a shipped PNG into its cell. The player has
+ * to pick these out of a deliberately dark stage, so the ship, enemies, danmaku and
+ * pickups all get lifted; scenery is drawn elsewhere and stays as authored.
+ */
+const SPRITE_LIFT = Object.freeze({
+  player: 1.55,
+  playerHit: 1.55,
+  enemyGrunt: 1.4,
+  enemyPopcorn: 1.4,
+  enemyTurret: 1.4,
+  enemyMidboss: 1.4,
+  bossCore: 1.4,
+  shot: 1.3,
+  laser: 1.3,
+  bulletOrb: 1.35,
+  bulletShaft: 1.35,
+  bulletShell: 1.35,
+  bulletWave: 1.35,
+  powerPow: 1.35,
+  powerLife: 1.35,
+  powerBomb: 1.35,
+  powerScore: 1.35,
+  star: 1.3,
+  explosion: 1.25,
+  spark: 1.25,
+});
+
+/**
  * The loaded PNG for a sprite name, resolved through `ALIASES` (`player` →
  * `s_player.png`). Returns `null` when no art was shipped for that name, which is
  * the signal to fall back to the procedural painter.
@@ -561,7 +589,13 @@ export function paintAtlas(g, opts = {}) {
     if (image && typeof g.drawImage === 'function') {
       try {
         g.save();
+        // Gameplay sprites must out-shine the scenery (which is deliberately dark so
+        // bullets read). The lifted cells are the ones the player has to find
+        // instantly: ship, enemies, bullets, pickups. Background art is untouched.
+        const lift = SPRITE_LIFT[entry.name];
+        if (lift && 'filter' in g) g.filter = `brightness(${lift}) saturate(1.06)`;
         g.drawImage(image, r.x, r.y, cell, cell);
+        g.filter = 'none';
         g.restore();
         continue;
       } catch {
