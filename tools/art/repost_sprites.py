@@ -31,7 +31,10 @@ def post(path, target):
         for x in range(w):
             r, g, b, _ = px[x, y]
             a = 255 - min(r, g, b)
-            px[x, y] = (r, g, b, 0 if a < 12 else a)
+            # BINARY alpha, not partial: partial-alpha edge pixels are what showed up
+            # as white dashes/specks along every silhouette the moment the sprite was
+            # lifted for contrast. A hard silhouette is what pixel art wants.
+            px[x, y] = (r, g, b, 255 if a >= 112 else 0)
     bbox = im.getbbox()
     if not bbox:
         return None, "empty"

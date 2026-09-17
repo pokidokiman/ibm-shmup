@@ -524,6 +524,15 @@ export function hasSprite(name) {
  * to pick these out of a deliberately dark stage, so the ship, enemies, danmaku and
  * pickups all get lifted; scenery is drawn elsewhere and stays as authored.
  */
+/**
+ * Sprites that must NOT take the shipped PNG art, because the generator produces
+ * damaged geometry for them (the round bullet came back a rounded square with a notch
+ * bitten out of its upper right; the fodder craft came back a blob with a broken frame
+ * and a bitten right edge). The procedural painters below draw clean, symmetric, crisp
+ * shapes for exactly these, which is what a bullet and a fodder craft need to be.
+ */
+const NO_ART = new Set(['bulletOrb', 'enemyPopcorn']);
+
 const SPRITE_LIFT = Object.freeze({
   player: 1.55,
   playerHit: 1.55,
@@ -585,7 +594,7 @@ export function paintAtlas(g, opts = {}) {
     // pixel grid survives upscaling). Only a sprite with no art of its own falls
     // through to the procedural painter — which is what every sprite used to get,
     // silently, while 25 loaded PNGs sat unused in the registry.
-    const image = assetImage(assets, entry.name);
+    const image = NO_ART.has(entry.name) ? null : assetImage(assets, entry.name);
     if (image && typeof g.drawImage === 'function') {
       try {
         g.save();
