@@ -125,7 +125,12 @@
     const MAX_FRAME = 0.25;       // clamp a stalled tab so the loop cannot spiral
 
     const canvas = document.getElementById('game-canvas');
-    const game = createGame({ seed: SEED, stage: STAGE });
+    let game = createGame({ seed: SEED, stage: STAGE });
+    // Retry bookkeeping: a run counter gives each retry its own deterministic seed,
+    // and `retryArmed` forces a fresh trigger press so dying with fire held cannot
+    // skip straight past the GAME OVER screen.
+    let run = 0;
+    let retryArmed = false;
     // Stream the shipped PNG art before the scene exists: `loadAssets()` resolves
     // to `{ file -> THREE.Texture }` and never rejects (a missing PNG is simply
     // absent), so the atlas can hold the registry from its very first frame.
@@ -280,6 +285,24 @@
         } catch (err) {
           accumulator = 0;
           reportFrameError('simulation', err);
+        }
+
+        // Retry. The HUD promises it ("press fire to retry") but nothing ever reset
+        // the run, so game over was a dead end. A fresh game object is the cleanest
+        // reset: no stale enemies, bullets, pickups or chain can survive it.
+        if (game.state.gameOver) {
+          if (!game.input.fire) {
+            retryArmed = true;
+          } else if (retryArmed) {
+            run += 1;
+            game = createGame({ seed: SEED + run, stage: STAGE });
+            globalThis.__shmup.game = game;
+            scene.setProgress(0);
+            accumulator = 0;
+            retryArmed = false;
+          }
+        } else {
+          retryArmed = false;
         }
 
         // Stage progress drives the parallax scroll, then the sprite batches are

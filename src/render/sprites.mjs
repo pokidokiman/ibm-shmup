@@ -211,9 +211,8 @@ function bulletBody(g, x, y, r, rim, opts = {}) {
  * atlas; `size` is the on-screen edge length in playfield pixels.
  */
 export const SPRITE_DEFS = {
-  player: {
-    frames: 1,
-    size: 30,
+  player: {    frames: 1,
+    size: 60,
     draw(g) {
       shape(g, [32, 2, 43, 33, 57, 45, 50, 53, 41, 45, 32, 50, 23, 45, 14, 53, 7, 45, 21, 33], PALETTE.phosphorDeep);
       shape(g, [32, 1, 41, 25, 41, 47, 32, 53, 23, 47, 23, 25], PALETTE.hull, PALETTE.phosphor, 1.4);
@@ -225,18 +224,16 @@ export const SPRITE_DEFS = {
       box(g, 48, 46, 5, 6, PALETTE.cyan);
     },
   },
-  playerHit: {
-    frames: 1,
-    size: 30,
+  playerHit: {    frames: 1,
+    size: 60,
     draw(g) {
       shape(g, [32, 2, 43, 33, 57, 45, 50, 53, 41, 45, 32, 50, 23, 45, 14, 53, 7, 45, 21, 33], PALETTE.hot);
       shape(g, [32, 1, 41, 25, 41, 47, 32, 53, 23, 47, 23, 25], PALETTE.hot, PALETTE.amber, 2);
       disc(g, 32, 24, 6, PALETTE.hot);
     },
   },
-  shot: {
-    frames: 1,
-    size: 14,
+  shot: {    frames: 1,
+    size: 24,
     draw(g) {
       g.fillStyle = radial(g, 32, 32, 30, [[0, PALETTE.hot], [0.35, PALETTE.amber], [1, 'rgba(255,154,60,0)']], PALETTE.amber);
       g.fillRect(12, 4, 40, 56);
@@ -245,9 +242,8 @@ export const SPRITE_DEFS = {
       box(g, 30, 8, 4, 48, PALETTE.core);
     },
   },
-  laser: {
-    frames: 1,
-    size: 12,
+  laser: {    frames: 1,
+    size: 22,
     draw(g) {
       g.fillStyle = linear(g, 0, 0, 64, 0, [[0, 'rgba(127,230,255,0)'], [0.5, PALETTE.cyan], [1, 'rgba(127,230,255,0)']], PALETTE.cyan);
       g.fillRect(0, 0, 64, 64);
@@ -256,16 +252,14 @@ export const SPRITE_DEFS = {
       box(g, 31, 0, 2, 64, PALETTE.core);
     },
   },
-  bulletOrb: {
-    frames: 1,
-    size: 18,
+  bulletOrb: {    frames: 1,
+    size: 32,
     draw(g) {
       bulletBody(g, 32, 32, 24, PALETTE.rimOrb, { glow: 'rgba(255,111,174,0.45)', core: PALETTE.core });
     },
   },
-  bulletShaft: {
-    frames: 1,
-    size: 16,
+  bulletShaft: {    frames: 1,
+    size: 30,
     draw(g) {
       shape(g, [32, 2, 46, 20, 46, 56, 32, 62, 18, 56, 18, 20], PALETTE.rimCyan, PALETTE.shadow, 2.5);
       box(g, 26, 12, 12, 40, PALETTE.shadow);
@@ -273,24 +267,21 @@ export const SPRITE_DEFS = {
       box(g, 30, 14, 4, 36, PALETTE.core);
     },
   },
-  bulletShell: {
-    frames: 1,
-    size: 14,
+  bulletShell: {    frames: 1,
+    size: 30,
     draw(g) {
       bulletBody(g, 32, 32, 22, PALETTE.rimShell, { glow: 'rgba(255,77,77,0.42)', core: PALETTE.hot });
       ring(g, 32, 32, 9, PALETTE.shadow, 2);
     },
   },
-  bulletWave: {
-    frames: 1,
-    size: 20,
+  bulletWave: {    frames: 1,
+    size: 34,
     draw(g) {
       bulletBody(g, 32, 32, 26, PALETTE.rimWave, { glow: 'rgba(176,124,255,0.45)', core: PALETTE.hot });
     },
   },
-  enemyGrunt: {
-    frames: 1,
-    size: 24,
+  enemyGrunt: {    frames: 1,
+    size: 56,
     draw(g) {
       shape(g, [8, 6, 56, 6, 62, 26, 42, 34, 42, 50, 22, 50, 22, 34, 2, 26], PALETTE.phosphorDeep);
       shape(g, [14, 10, 50, 10, 54, 24, 32, 30, 10, 24], PALETTE.phosphor, null);
@@ -299,18 +290,16 @@ export const SPRITE_DEFS = {
       box(g, 26, 48, 12, 12, PALETTE.amberDeep);
     },
   },
-  enemyPopcorn: {
-    frames: 1,
-    size: 18,
+  enemyPopcorn: {    frames: 1,
+    size: 48,
     draw(g) {
       shape(g, [32, 8, 56, 32, 32, 56, 8, 32], PALETTE.amberDeep);
       shape(g, [32, 16, 48, 32, 32, 48, 16, 32], PALETTE.amber);
       disc(g, 32, 32, 7, PALETTE.hot);
     },
   },
-  enemyTurret: {
-    frames: 1,
-    size: 28,
+  enemyTurret: {    frames: 1,
+    size: 60,
     draw(g) {
       shape(g, [16, 4, 48, 4, 60, 20, 60, 44, 48, 60, 16, 60, 4, 44, 4, 20], PALETTE.phosphorDeep);
       shape(g, [22, 10, 42, 10, 52, 22, 52, 42, 42, 54, 22, 54, 12, 42, 12, 22], PALETTE.cyanDeep);
@@ -321,9 +310,8 @@ export const SPRITE_DEFS = {
       box(g, 38, 54, 8, 10, PALETTE.amber);
     },
   },
-  enemyMidboss: {
-    frames: 1,
-    size: 44,
+  enemyMidboss: {    frames: 1,
+    size: 88,
     draw(g) {
       shape(g, [32, 0, 50, 14, 58, 34, 44, 44, 44, 58, 20, 58, 20, 44, 6, 34, 14, 14], PALETTE.phosphorDeep);
       shape(g, [32, 6, 46, 18, 48, 34, 32, 42, 16, 34, 18, 18], PALETTE.phosphor, null);
@@ -334,9 +322,8 @@ export const SPRITE_DEFS = {
       box(g, 46, 20, 6, 20, PALETTE.amber);
     },
   },
-  bossCore: {
-    frames: 1,
-    size: 132,
+  bossCore: {    frames: 1,
+    size: 300,
     draw(g) {
       shape(g, [32, 0, 54, 10, 62, 30, 52, 44, 54, 62, 32, 62, 10, 62, 12, 44, 2, 30, 10, 10], PALETTE.phosphorDeep);
       shape(g, [32, 4, 48, 16, 54, 32, 44, 46, 44, 58, 20, 58, 20, 46, 10, 32, 16, 16], PALETTE.cyanDeep);
@@ -348,9 +335,8 @@ export const SPRITE_DEFS = {
       box(g, 52, 26, 8, 16, PALETTE.amber);
     },
   },
-  explosion: {
-    frames: 4,
-    size: 52,
+  explosion: {    frames: 4,
+    size: 96,
     draw(g, _s, frame) {
       const t = frame / 3;
       const alpha = 1 - t * 0.75;
@@ -374,26 +360,23 @@ export const SPRITE_DEFS = {
       g.globalAlpha = 1;
     },
   },
-  spark: {
-    frames: 1,
-    size: 16,
+  spark: {    frames: 1,
+    size: 24,
     draw(g) {
       shape(g, [32, 4, 36, 28, 60, 32, 36, 36, 32, 60, 28, 36, 4, 32, 28, 28], PALETTE.hot);
       disc(g, 32, 32, 6, PALETTE.amber);
     },
   },
-  ring: {
-    frames: 1,
-    size: 60,
+  ring: {    frames: 1,
+    size: 110,
     draw(g) {
       ring(g, 32, 32, 26, PALETTE.cyan, 3);
       ring(g, 32, 32, 18, PALETTE.hot, 2);
       ring(g, 32, 32, 10, PALETTE.phosphor, 1.5);
     },
   },
-  graze: {
-    frames: 1,
-    size: 22,
+  graze: {    frames: 1,
+    size: 30,
     draw(g) {
       g.strokeStyle = PALETTE.cyan;
       g.lineWidth = 4;
@@ -403,59 +386,52 @@ export const SPRITE_DEFS = {
       ring(g, 32, 44, 12, PALETTE.hot, 2);
     },
   },
-  powerPow: {
-    frames: 1,
-    size: 26,
+  powerPow: {    frames: 1,
+    size: 44,
     draw(g) {
       shape(g, [32, 2, 58, 16, 58, 48, 32, 62, 6, 48, 6, 16], PALETTE.red, PALETTE.hot, 2);
       label(g, 'P', PALETTE.hot);
     },
   },
-  powerLife: {
-    frames: 1,
-    size: 26,
+  powerLife: {    frames: 1,
+    size: 44,
     draw(g) {
       shape(g, [32, 2, 58, 16, 58, 48, 32, 62, 6, 48, 6, 16], PALETTE.phosphorDeep, PALETTE.hot, 2);
       shape(g, [32, 20, 44, 32, 32, 50, 20, 32], PALETTE.hot);
       box(g, 28, 28, 8, 8, PALETTE.phosphor);
     },
   },
-  powerBomb: {
-    frames: 1,
-    size: 26,
+  powerBomb: {    frames: 1,
+    size: 44,
     draw(g) {
       shape(g, [32, 2, 58, 16, 58, 48, 32, 62, 6, 48, 6, 16], PALETTE.violet, PALETTE.hot, 2);
       label(g, 'B', PALETTE.hot);
     },
   },
-  powerScore: {
-    frames: 1,
-    size: 26,
+  powerScore: {    frames: 1,
+    size: 44,
     draw(g) {
       shape(g, [32, 2, 58, 16, 58, 48, 32, 62, 6, 48, 6, 16], PALETTE.amberDeep, PALETTE.hot, 2);
       label(g, '$', PALETTE.hot);
     },
   },
-  star: {
-    frames: 1,
-    size: 6,
+  star: {    frames: 1,
+    size: 8,
     draw(g) {
       disc(g, 32, 32, 20, radial(g, 32, 32, 20, [[0, '#ffffff'], [0.4, PALETTE.amber], [1, 'rgba(255,192,97,0)']], PALETTE.amber));
       disc(g, 32, 32, 8, '#ffffff');
     },
   },
-  flame: {
-    frames: 2,
-    size: 14,
+  flame: {    frames: 2,
+    size: 20,
     draw(g, _s, frame) {
       const len = frame === 0 ? 46 : 32;
       shape(g, [32 - 10, 4, 32 + 10, 4, 32, len], PALETTE.amber);
       shape(g, [32 - 6, 6, 32 + 6, 6, 32, len - 10], PALETTE.hot);
     },
   },
-  bombWave: {
-    frames: 1,
-    size: 260,
+  bombWave: {    frames: 1,
+    size: 420,
     draw(g) {
       disc(g, 32, 32, 32, radial(g, 32, 32, 32, [[0, 'rgba(255,255,255,0)'], [0.55, 'rgba(255,247,221,0.35)'], [0.82, 'rgba(127,230,255,0.75)'], [1, 'rgba(127,230,255,0)']], PALETTE.cyan));
       ring(g, 32, 32, 30, PALETTE.hot, 3);
