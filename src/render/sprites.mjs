@@ -531,7 +531,15 @@ export function hasSprite(name) {
  * and a bitten right edge). The procedural painters below draw clean, symmetric, crisp
  * shapes for exactly these, which is what a bullet and a fodder craft need to be.
  */
-const NO_ART = new Set(['bulletOrb', 'enemyPopcorn']);
+const NO_ART = new Set([
+  // The generator reliably mangles SIMPLE geometric subjects: a round bullet came back a
+  // rounded square with a notch, fodder a blob with a bitten edge, and the player's shot an
+  // hourglass with V-notches cut into both sides (visible constantly, since the player is
+  // always firing). Detailed craft it does well and those keep their shipped art.
+  'bulletOrb',
+  'enemyPopcorn',
+  'shot',
+]);
 
 const SPRITE_LIFT = Object.freeze({
   player: 1.55,
