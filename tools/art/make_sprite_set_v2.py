@@ -75,15 +75,37 @@ def generate(prompt, seed, lora, canvas):
 
 
 def post(raw_path, target):
-    """Returns (image, 'ok') or (None, reason) when the render is unusable."""
-    im = Image.open(raw_path).convert("RGBA")
-    px = im.load()
+    """Returns (image, 'ok') or (None, reason) when the render is unusable.
+
+    The background is the white region CONNECTED TO THE IMAGE BORDER - flood-fill it and
+    key only that. Keying every white pixel instead (alpha = 255 - min(r,g,b), or a hard
+    white threshold) also deletes the light pixels INSIDE the sprite - cores, highlights,
+    light plating - which ships every sprite with holes punched through it.
+    """
+    im = Image.open(raw_path).convert("RGB")
     w, h = im.size
+    rgb = im.load()
+    mask = Image.new("L", (w, h), 0)
+    mk = mask.load()
     for y in range(h):
         for x in range(w):
-            r, g, b, a = px[x, y]
-            if r > 236 and g > 236 and b > 236:
-                px[x, y] = (r, g, b, 0)
+            if min(rgb[x, y]) >= 200:
+                mk[x, y] = 255
+    for x in range(w):
+        for sy in (0, h - 1):
+            if mk[x, sy] == 255:
+                ImageDraw.floodfill(mask, (x, sy), 128, thresh=0)
+    for y in range(h):
+        for sx in (0, w - 1):
+            if mk[sx, y] == 255:
+                ImageDraw.floodfill(mask, (sx, y), 128, thresh=0)
+    mk = mask.load()
+    im = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    px = im.load()
+    for y in range(h):
+        for x in range(w):
+            if mk[x, y] != 128:
+                px[x, y] = (rgb[x, y][0], rgb[x, y][1], rgb[x, y][2], 255)
     bbox = im.getbbox()
     if not bbox:
         return None, "empty"
