@@ -667,9 +667,18 @@ export function createSpriteAtlas(opts = {}) {
     if (three && typeof three.CanvasTexture === 'function') {
       texture = new three.CanvasTexture(canvas);
       texture.magFilter = opts.filter ?? three.NearestFilter;
-      texture.minFilter = three.LinearMipMapLinearFilter ?? three.LinearFilter;
-      texture.generateMipmaps = true;
+      // NEAREST minification, no mipmaps. Mip levels of an ATLAS are built by averaging the
+      // whole sheet, so every reduced level blends each cell with its transparent margins
+      // AND with its neighbours: sprites drawn smaller than their 128px cell lose pieces at
+      // the edges (they look bitten) and pick up colour from the adjacent sprite. Pixel art
+      // is minified with nearest-neighbour or it is not pixel art.
+      texture.minFilter = three.NearestFilter ?? three.LinearFilter;
+      texture.generateMipmaps = false;
       texture.colorSpace = three.SRGBColorSpace ?? undefined;
+      if (three.ClampToEdgeWrapping !== undefined) {
+        texture.wrapS = three.ClampToEdgeWrapping;
+        texture.wrapT = three.ClampToEdgeWrapping;
+      }
       texture.needsUpdate = true;
     }
   }
